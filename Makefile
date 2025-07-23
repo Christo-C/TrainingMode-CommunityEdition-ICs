@@ -1,6 +1,6 @@
 .PHONY: clean iso all release
 
-DATS = build/ledgedash.dat build/wavedash.dat build/lcancel.dat build/labCSS.dat build/eventMenu.dat build/lab.dat build/powershield.dat build/edgeguard.dat
+DATS = build/ledgedash.dat build/wavedash.dat build/lcancel.dat build/labCSS.dat build/eventMenu.dat build/lab.dat build/powershield.dat build/edgeguard.dat build/handoff.dat
 
 # find all .asm and .s files in the ASM dir. We have the escape the spaces, so we pipe to sed
 ASM_FILES := $(shell find ASM -type f \( -name '*.asm' -o -name '*.s' \) | sed 's/ /\\ /g')
@@ -73,6 +73,9 @@ build/powershield.dat: src/powershield.c src/events.h
 
 build/edgeguard.dat: src/edgeguard.c src/edgeguard.h src/events.h
 	$(MEX_BUILD) -i "src/edgeguard.c" -s "evFunction" -dat "build/edgeguard.dat" -t "MexTK/evFunction.txt"
+
+build/edgeguard.dat: src/handoff.c src/handoff.h src/events.h
+	$(MEX_BUILD) -i "src/handoff.c" -s "evFunction" -dat "build/handoff.dat" -t "MexTK/evFunction.txt"
 
 build/codes.gct: Additional\ ISO\ Files/opening.bnr $(ASM_FILES)
 	cd "Build TM Codeset" && ${GECKO} build
