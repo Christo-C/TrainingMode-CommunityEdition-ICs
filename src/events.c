@@ -452,6 +452,24 @@ EventDesc EscapeSheik = {
     .matchData = 0,
 };
 
+EventDesc Handoff = {
+    // Event Name
+    .eventName = "Handoff Training\n",
+    .eventDescription = "Practice Ice Climber Handoffs\n",
+    .eventFile = "handoff",
+    .jumpTableIndex = -1,
+    .CSSType = SLCHRKIND_TRAINING,
+    .allowed_characters = { .hmn = CSSID_ICECLIMBERS, .cpu = -1 },
+    .playerKind = -1,
+    .cpuKind = -1,
+    .stage = -1,
+    .disable_hazards = true,
+    .force_sopo = false,
+    .scoreType = SCORETYPE_KO,
+    .callbackPriority = 3,
+    .matchData = 0,
+};
+
 EventDesc Eggs = {
     .eventName = "Eggs-ercise\n",
     .eventDescription = "Break the eggs! Only strong hits will\nbreak them. DPad down = free practice.",
@@ -569,6 +587,7 @@ static EventDesc *Spacie_Events[] = {
     &Edgeguard,
     &SideBSweet,
     &EscapeSheik,
+    &Handoff,
 };
 static EventPage Spacie_Page = {
     .name = "Character-specific Tech",
