@@ -9,8 +9,6 @@
 .macro CharRng_FetchSetting reg, setting, default_branch
 load \reg, EventVars_Ptr
 lwz \reg, 0x0(\reg)
-lwz \reg, EventVars_PersistentData(\reg) # persistent data
-cmpwi \reg, 0 # if persistent data is null, we default to normal rng behavior
-beq \default_branch
+lwz \reg, EventVars_RNGControl(\reg)
 lbz \reg, \setting(\reg)
 .endm

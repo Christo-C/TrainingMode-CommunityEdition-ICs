@@ -4,7 +4,7 @@
 #define CPU_LEFT_STAGE_POS_X 70.f
 #define CPU_LEFT_DIRECTION -1.f
 
-void Exit(int value);
+void Exit(GOBJ *menu);
 void ChangeFireSpeedOption(GOBJ *event_menu, int value);
 void ChangeDirection(GOBJ *event_menu, int value);
 void ChangeRandomFireDelayMin(GOBJ *event_menu, int value);
@@ -39,16 +39,16 @@ enum falco_direction {
     DIRECTION_LEFT,
 };
 
-static char *Options_FireSpeed[] = { "Random", "Slow", "Medium", "Fast" };
-static char *Options_LaserHeight[] = { "Random", "Very Low", "Low", "Mid", "High" };
-static char *Options_Direction[] = { "Right", "Left" };
+static const char *Options_FireSpeed[] = { "Random", "Slow", "Medium", "Fast" };
+static const char *Options_LaserHeight[] = { "Random", "Very Low", "Low", "Mid", "High" };
+static const char *Options_Direction[] = { "Right", "Left" };
 
 static EventOption Options_Main[] = {
     {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(Options_FireSpeed) / 4,
         .name = "Fire Speed",
-        .desc = "Change the rate of fire.",
+        .desc = {"Change the rate of fire."},
         .values = Options_FireSpeed,
         .OnChange = ChangeFireSpeedOption,
     },
@@ -57,8 +57,8 @@ static EventOption Options_Main[] = {
         .value_num = 61,
         .val = 0,
         .name = "Min Fire Delay",
-        .desc = "Adjust the minimum number of frames between lasers",
-        .values = "%d",
+        .desc = {"Adjust the minimum number of frames between lasers"},
+        .format = "%d",
         .OnChange = ChangeRandomFireDelayMin,
         .disable = false,
     },
@@ -67,8 +67,8 @@ static EventOption Options_Main[] = {
         .value_num = 61,
         .val = 20,
         .name = "Max Fire Delay",
-        .desc = "Adjust the maximum number of frames between lasers",
-        .values = "%d",
+        .desc = {"Adjust the maximum number of frames between lasers"},
+        .format = "%d",
         .OnChange = ChangeRandomFireDelayMax,
         .disable = false,
     },
@@ -76,21 +76,21 @@ static EventOption Options_Main[] = {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(Options_LaserHeight) / 4,
         .name = "Laser Height",
-        .desc = "Change the laser height.",
+        .desc = {"Change the laser height."},
         .values = Options_LaserHeight,
     },
     {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(Options_Direction) / 4,
         .name = "Direction",
-        .desc = "Change which way falco shoots a laser.",
+        .desc = {"Change which way falco shoots a laser."},
         .values = Options_Direction,
         .OnChange = ChangeDirection,
     },
     {
         .kind = OPTKIND_FUNC,
         .name = "Exit",
-        .desc = "Return to the Event Select Screen.",
+        .desc = {"Return to the Event Select Screen."},
         .OnSelect = Exit,
     },
 };
@@ -98,7 +98,7 @@ static EventOption Options_Main[] = {
 static EventMenu Menu_Main = {
     .name = "Powershield Training",
     .option_num = sizeof(Options_Main) / sizeof(EventOption),
-    .options = &Options_Main,
+    .options = Options_Main,
 };
 
 static int falco_wait_delay = -1;
@@ -124,7 +124,7 @@ void Event_Think(GOBJ *menu) {
     }
     if (new_direction != -1) {
         Options_Main[OPT_DIRECTION].val = new_direction;
-        ChangeDirection(Options_Main, new_direction);
+        ChangeDirection(menu, new_direction);
     }
 
     int state = falco_data->state_id;
@@ -202,7 +202,7 @@ void Event_Think(GOBJ *menu) {
     }
 }
 
-void Exit(int value) {
+void Exit(GOBJ *menu) {
     stc_match->state = 3;
     Match_EndVS();
 }

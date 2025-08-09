@@ -10,26 +10,29 @@ If you have any questions, feel free to ping me (Aitch) in the dev-discussion ch
 
 ## Compilation
 
-We have completely overhauled the build process.
-Now any developer can easily compile an iso from source with a simple script or makefile.
-
 ### Windows
 1. [Install DevKitPro](https://github.com/devkitPro/installer/releases/latest). Install the Gamecube (aka PPC or PowerPC) package.
-2. Double click to run the 'windows_setup.bat' file. If DevKitPro is installed, a console will show up.
-3. Run the command `make iso=path-to-melee.iso iso` in the console. If all goes well, 'TM-CE.iso' will be created.
+2. Run the 'windows_setup.bat' file.
+3. Run the command `./build.sh path-to-melee.iso` in the console.
 
 ### Linux / MacOS / WSL / MSYS2
 1. [Install DevKitPro](https://devkitpro.org/wiki/Getting_Started#Unix-like_platforms). Install the Gamecube (gamecube-dev) package.
-    - Ensure that `/opt/devkitpro/devkitPPC/bin/` is added to the PATH.
-2. [Install Mono](https://www.mono-project.com/download/stable). Prefer installation through your package manager.
-3. Install xdelta3. This should be simple to install through your package manager.
-4. Run `make iso=path-to-melee.iso iso`. If all goes well, 'TM-CE.iso' will be created.
-    - If the provided 'gecko' binary fails (possibly due to libc issues), you can compile your own binary from [here](https://github.com/JLaferri/gecko/releases/tag/v3.4.0). **YOU MUST USE VERSION 3.4.0 OF GECKO OR IT WILL SILENTLY FAIL**.
-    - If the provided 'gc_fst' binary fails (possibly due to libc issues), you can compile your own binary from [here](https://github.com/AlexanderHarrison/gc_fst).
+2. Install xdelta3. This should be simple to install through your package manager.
+3. Run the command `./build.sh path-to-melee.iso` in the console.
+    - If the provided binaries fail (possibly due to libc issues), you can compile your own binaries from my repos:
+[gc_fst](https://github.com/AlexanderHarrison/gc_fst), [hmex](https://github.com/AlexanderHarrison/cdat), [hgecko](https://github.com/AlexanderHarrison/hgecko)
+
+### Build Mode
+The build script takes an optional additional mode argument called the mode - `build.sh iso [mode]`.
+This allows building an optimized release, or fine-grained recompilation.
+Examples:
+- `build.sh iso`: debug build from scratch. **You probably want to use this**.
+- `build.sh iso release`: release build from scratch.
+- `build.sh iso build/codes.gct`: only rebuild asm.
+- `build.sh iso build/edgeguard.dat`: only rebuild edgeguard event. You can use any dat file here.
 
 ## Project Structure
-
-There are three important directories to know about:
+There are four important directories to know about:
 1. `src/`: this directory contains the source for the C events, as well as some setup code for the event in `events.c`.
 2. `MexTK/`:
     - The `include/` subdirectory contains headers for internal melee functions. Calling these will call native ssbm code.
@@ -40,7 +43,10 @@ There are three important directories to know about:
 3. `ASM/`: This huge directory contains gecko codes for various things like UCF, old events, OSDs, etc.
 Every file has a injection address at the start.
 When the game boots up, it will overwrite the instruction at that address and replace it with a branch to the asm contained in the file.
-The `.asm` files will be injected and run, while the `.s` files contain include macros and will not be assembled by gecko.
+The `.asm` files will be injected and run, while the `.s` files contain include macros and will not be assembled by hgecko.
+4. `dats/`: The dat file format is used by SSBM for storing data, such as models and animations.
+This directory contains HUD models and animations for events.
+You will need to use [HSDRawViewer](https://github.com/Ploaj/HSDLib) to view these.
 
 ## Melee Stuff
 
@@ -51,7 +57,7 @@ Everything is stored in dat files - models, animations, code, textures, etc. Onl
 
 [You can open, view, and edit dat files with HSDRawViewer](https://github.com/Ploaj/HSDLib).
 
-The `dat/` directory contains some of these files.
+The `dats/` directory contains some of these files.
 They contain event specific objects, mostly menu models with some random other data.
 
 ### Objects
@@ -76,7 +82,7 @@ You'll need to right click on the node -> Open As -> JOBJ in HSDRaw in order to 
 ## How To Do Things
 
 - If you want to alter an event written in C (easy):
-    - The training lab, lcancel, ledgedash, wavedash, and powershield events are written in c.
+    - The training lab, lcancel, ledgedash, wavedash, edgeguard, and powershield events are written in c.
     This makes them much easier to modify than the other events. Poke around in their source in `src/`.
 - If you want to alter an event written in asm (big knowledge check):
     - You will need to know a bit of Power PC asm.
@@ -87,9 +93,11 @@ You'll need to right click on the node -> Open As -> JOBJ in HSDRaw in order to 
     Feel free to put a comment there indicating the source!
 - If you want to make a new event (tricky, but super flexible):
     - Add a file and header to the `src/`.
-    - Add the required compilation steps in `Makefile` and `build_windows.bat`. Follow the same structure as the other events. Be sure to use the evFunction mode. You can skip the dat copy if you don't have any models attached to the event (you won't), like the powershield event.
     - Add the `EventDesc` and `EventMatchData` structs to `events.c` and add a reference to them in the `General_Events`, `Minigames_Events`, or `Spacie_Events` array.
-    - Implement the `Event_Init`, `Event_Update`, `Event_Think` methods and `Event_Menu` pointer in your c file. Poke around the other events to figure out how the data flows.
+    - Implement the `Event_Init`, `Event_Update`, `Event_Think` methods and `Event_Menu` pointer in your c file.
+    - Add the required compilation steps in `build.sh`. Follow the same structure as the other events. You can skip the dat copy if you don't have any models attached to the event (you won't), like the powershield event.
+Poke around the other events to figure out how to implement these.
+The powershield event is the simplest and easiest to learn from.
 - If you want to create a new OSD (hard):
     - You will need to know a lot of Power PC asm.
     - You will need to find the function that does the processing of the value you want to measure (reach out to me if you're not sure how to find this).
@@ -97,8 +105,7 @@ You'll need to right click on the node -> Open As -> JOBJ in HSDRaw in order to 
     - Add the OSD to the OSD list in `ASM/training-mode/Globals.s`. OSD ids are weird, I don't know exactly how to do this.
 
 ## Debugging Tips
-- Due to a deficiency in the MexTK headers, we cannot turn on warnings effectively, so be aware of that.
-- Set `TM_DEBUG` to 2 in events.h to get OSReport statements on the screen.
+- Development builds enable logging! Call `TMLOG(...)` to print to the dolphin console and the onscreen console. L/R+Z toggles console visibility.
 - **Use the dolphin debugger!** Make sure you have the latest version of dolphin for debugging.
     - To set a breakpoint, use the `bp()` fn call in C or the `SetBreakpoint` macro in ASM (which will clobber r3). Then when you boot up dolphin, put a breakpoint on the `bp` symbol.
-    - **Be sure to load GTME01.map with Symbols->Load Other Map File!**
+    - **Be sure to load GTME01.map with Symbols->Load Other Map File!**. Or copy it to the Maps/ directory in the dolphin data directory.

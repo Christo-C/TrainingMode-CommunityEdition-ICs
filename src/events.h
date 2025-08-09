@@ -6,25 +6,29 @@
 #include "savestate.h"
 #include <stdint.h>
 
-#define TM_VERSSHORT "TM-CE v1.3.1"
-#define TM_VERSLONG "TM Community Edition v1.3.1"
-#define TM_DEBUG 0 // 0 = release (no logging), 1 = OSReport logs, 2 = onscreen logs
+#define TM_VERSSHORT "TM-CE v1.3 d1"
+#define TM_VERSLONG "TM Community Edition v1.3 d1"
 #define EVENT_DATASIZE 512
 #define TM_FUNC -(50 * 4)
 
 #define ANALOG_TRIGGER_THRESHOLD 43
 
 // disable all logs in release mode
-#if TM_DEBUG == 0
-#define TMLOG(...) (void)0
-#else
+#if TM_DEBUG
 #define TMLOG(...) do { \
     DevelopText_AddString(event_vars->db_console_text, __VA_ARGS__); \
     OSReport(__VA_ARGS__); \
 } while (0)
+#define TMLOG_ONCE(...) do { \
+    static int __logged_once = 0; \
+    if (!__logged_once) { \
+        __logged_once = 1; \
+        TMLOG(__VA_ARGS__); \
+    } \
+} while (0)
+#else
+#define TMLOG(...) (void)0
 #endif
-
-#define SHORTCUT_BUTTONS (HSD_BUTTON_A | HSD_BUTTON_B | HSD_BUTTON_X | HSD_TRIGGER_Z)
 
 typedef struct EventMatchData //r8
 {
@@ -119,7 +123,6 @@ typedef struct EventPage
     EventDesc **events;
 } EventPage;
 
-
 typedef struct evFunction
 {
     void (*Event_Init)(GOBJ *event);
@@ -128,19 +131,78 @@ typedef struct evFunction
     EventMenu **menu_start;
 } evFunction;
 
+typedef struct Rect
+{
+    float x, y, w, h;
+} Rect;
+
+static inline void RectShrink(Rect *dst, float size)
+{
+    dst->x += size;
+    dst->y += size;
+    dst->w -= size * 2.f;
+    dst->h -= size * 2.f;
+}
+
+static inline void RectSplitL(Rect *dst, Rect *src, float size, float padding)
+{
+    *dst = (Rect) { src->x, src->y, size, src->h };
+    src->x += size + padding;
+    src->w -= size + padding;
+}
+
+static inline void RectSplitR(Rect *dst, Rect *src, float size, float padding)
+{
+    *dst = (Rect) { src->x + src->w - size, src->y, size, src->h };
+    src->w -= size + padding;
+}
+
+static inline void RectSplitU(Rect *dst, Rect *src, float size, float padding)
+{
+    *dst = (Rect) { src->x, src->y, src->w, size };
+    src->y += size + padding;
+    src->h -= size + padding;
+}
+
+static inline void RectSplitD(Rect *dst, Rect *src, float size, float padding)
+{
+    *dst = (Rect) { src->x, src->y + src->h - size, src->w, size };
+    src->h -= size + padding;
+}
+
+void HUD_DrawRects(Rect *rects, GXColor *colors, int count);
+void HUD_DrawText(const char *text, Rect *pos, float size);
+void HUD_DrawActionLogBar(u8 *action_log, GXColor *color_lookup, int log_count);
+void HUD_DrawActionLogKey(char **action_names, GXColor *action_colors, int action_count);
+
+typedef struct RNGControl
+{
+    u8 peach_item;      // 0x0
+    u8 peach_fsmash;    // 0x1
+    u8 luigi_misfire;   // 0x2
+    u8 gnw_hammer;      // 0x3
+    u8 nana_throw;      // 0x4
+} RNGControl;
+
+typedef struct HUDCamData {
+    bool hide;
+    int canvas;
+    u32 text_cache_used;
+    Text *text_cache[32];
+} HUDCamData;
+
 typedef struct EventVars
 {
     EventDesc *event_desc;                                                                   // event information
     evMenu *menu_assets;                                                                     // menu assets
     GOBJ *event_gobj;                                                                        // event gobj
     GOBJ *menu_gobj;                                                                         // event menu gobj
-    void *persistent_data;                                                                   // persistent data to be accessed from both C and ASM
+    RNGControl *rng;                                                                         // rng struct pointer
     int game_timer;                                                                          // amount of game frames passed
-    u8 hide_menu;                                                                            // enable this to hide the base menu. used for custom menus.
     int (*Savestate_Save_v1)(Savestate_v1 *savestate, int flags);                                  // function pointer to save state
     int (*Savestate_Load_v1)(Savestate_v1 *savestate, int flags);                                  // function pointer to load state
     GOBJ *(*Message_Display)(int msg_kind, int queue_num, int msg_color, char *format, ...); // function pointer to display message
-    int *(*Tip_Display)(int lifetime, char *fmt, ...);
+    int (*Tip_Display)(int lifetime, char *fmt, ...);
     void (*Tip_Destroy)(void);      // function pointer to destroy tip
     Savestate_v1 *savestate;       // points to the events main savestate
 
@@ -153,6 +215,11 @@ typedef struct EventVars
     evFunction evFunction;      // event specific functions
     HSD_Archive *event_archive; // event archive header
     DevText *db_console_text;
+    GOBJ *hudcam_gobj;
+    void (*HUD_DrawRects)(Rect *rects, GXColor *colors, int count);
+    void (*HUD_DrawText)(const char *text, Rect *pos, float size);
+    void (*HUD_DrawActionLogBar)(u8 *action_log, GXColor *color_lookup, int log_count);
+    void (*HUD_DrawActionLogKey)(char **action_names, GXColor *action_colors, int action_count);
 } EventVars;
 #define event_vars_ptr_loc ((EventVars**)0x803d7054)
 #define event_vars (*event_vars_ptr_loc)
@@ -162,22 +229,27 @@ EventDesc *GetEventDesc(int page, int event);
 void EventInit(int page, int eventID, MatchInit *matchData);
 void EventLoad(void);
 int Text_AddSubtextManual(Text *text, char *string, int posx, int posy, int scalex, int scaley);
-int GOBJToID(GOBJ *gobj);
-int FtDataToID(FighterData *fighter_data);
-int BoneToID(FighterData *fighter_data, JOBJ *bone);
-GOBJ *IDToGOBJ(int id);
-FighterData *IDToFtData(int id);
-JOBJ *IDToBone(FighterData *fighter_data, int id);
+GOBJ *GOBJToID(GOBJ *gobj);
+FighterData *FtDataToID(FighterData *fighter_data);
+JOBJ *BoneToID(FighterData *fighter_data, JOBJ *bone);
+GOBJ *IDToGOBJ(GOBJ *id_as_ptr);
+FighterData *IDToFtData(FighterData *id_as_ptr);
+JOBJ *IDToBone(FighterData *fighter_data, JOBJ *id_as_ptr);
+void UpdateDevCamera(void);
 void EventUpdate(void);
 void Event_IncTimer(GOBJ *gobj);
 void Test_Think(GOBJ *gobj);
 void Hazards_Disable(void);
+void TM_CreateWatermark(void);
 
 // GX Link args
 #define GXLINK_MENUMODEL 12
 #define GXPRI_MENUMODEL 80
 #define GXLINK_MENUTEXT 12
 #define GXPRI_MENUTEXT GXPRI_MENUMODEL + 1
+
+#define GXLINK_HUD 18
+#define GXPRI_HUD 78
 
 // Message
 void Message_Init(void);
@@ -186,6 +258,8 @@ void Message_Manager(GOBJ *mngr_gobj);
 void Message_Destroy(GOBJ **msg_queue, int msg_num);
 void Message_Add(GOBJ *msg_gobj, int queue_num);
 void Message_CObjThink(GOBJ *gobj);
+
+void HUD_CObjThink(GOBJ *gobj);
 
 #define MSGQUEUE_NUM 7
 #define MSGQUEUE_SIZE 8
@@ -267,6 +341,7 @@ typedef struct TipMgr
 int Tip_Display(int lifetime, char *fmt, ...);
 void Tip_Destroy(void); // 0 = immediately destroy, 1 = force exit
 void Tip_Think(GOBJ *gobj);
+void Tip_Init(void);
 
 #define TIP_TXTJOINT 2
 

@@ -4,6 +4,7 @@
 
 // todo: move structs from lab_common.h to here
 
+static ShortcutList Lab_ShortcutList;
 static EventMenu LabMenu_General;
 static EventMenu LabMenu_OverlaysHMN;
 static EventMenu LabMenu_OverlaysCPU;
@@ -18,7 +19,6 @@ static EventMenu LabMenu_Stage_FOD;
 static EventMenu LabMenu_CustomOSDs;
 static EventMenu LabMenu_SlotManagement;
 static EventMenu LabMenu_AlterInputs;
-static ShortcutList Lab_ShortcutList;
 static EventMenu LabMenu_OSDs;
 
 #define AUTORESTORE_DELAY 20
@@ -85,8 +85,8 @@ enum custom_asid_groups
 static u32 lz77Compress(u8 *uncompressed_text, u32 uncompressed_size, u8 *compressed_text, u8 pointer_length_width);
 static u32 lz77Decompress(u8 *compressed_text, u8 *uncompressed_text);
 static float GetAngleOutOfDeadzone(float angle, int lastSDIWasCardinal);
-static void DistributeChances(u16 *chances[], unsigned int chance_count);
-static void ReboundChances(u16 *chances[], unsigned int chance_count, int just_changed_option);
+static void DistributeChances(s16 *chances[], unsigned int chance_count);
+static void ReboundChances(s16 *chances[], unsigned int chance_count, int just_changed_option);
 static int IsTechAnim(int state);
 static bool CanWalljump(GOBJ* fighter);
 static int GetCurrentStateName(GOBJ *fighter, char *buf);
@@ -94,7 +94,7 @@ static bool CheckHasJump(GOBJ *g);
 static int InHitstunAnim(int state);
 static int IsHitlagVictim(GOBJ *character);
 static int InShieldStun(int state);
-void CustomTDI_Update(GOBJ *gobj);
+int CustomTDI_Update(GOBJ *gobj);
 void CustomTDI_Destroy(GOBJ *gobj);
 void CustomTDI_Apply(GOBJ *cpu, GOBJ *hmn, CustomTDI *di);
 void CPUResetVars(void);
@@ -105,6 +105,8 @@ void Lab_ChangeAlterInputsFrame(GOBJ *menu_gobj, int value);
 int Lab_SetAlterInputsMenuOptions(GOBJ *menu_gobj);
 
 // ACTIONS #################################################
+
+#define ActionEnd { .state = -1, }
 
 // CPU Action Definitions
 static CPUAction Lab_CPUActionShield[] = {
@@ -123,7 +125,7 @@ static CPUAction Lab_CPUActionShield[] = {
         .input     = PAD_TRIGGER_R,
         .isLast    = 1,
     },
-    -1,
+    ActionEnd,
 };
 static CPUAction Lab_CPUActionGrab[] = {
     {
@@ -136,7 +138,7 @@ static CPUAction Lab_CPUActionGrab[] = {
         .input     = PAD_TRIGGER_Z,
         .isLast    = 1,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionUpB[] = {
     {
@@ -159,7 +161,7 @@ static CPUAction Lab_CPUActionUpB[] = {
         .input     = PAD_BUTTON_B,
         .isLast    = 1,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionSideBToward[] = {
     {
@@ -177,7 +179,7 @@ static CPUAction Lab_CPUActionSideBToward[] = {
         .isLast    = 1,
         .stickDir  = STCKDIR_TOWARD,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionSideBAway[] = {
     {
@@ -195,7 +197,7 @@ static CPUAction Lab_CPUActionSideBAway[] = {
         .isLast    = 1,
         .stickDir  = STCKDIR_AWAY,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionDownB[] = {
     {
@@ -213,7 +215,7 @@ static CPUAction Lab_CPUActionDownB[] = {
         .input     = PAD_BUTTON_B,
         .isLast    = 1,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionNeutralB[] = {
     {
@@ -231,7 +233,7 @@ static CPUAction Lab_CPUActionNeutralB[] = {
         .input     = PAD_BUTTON_B,
         .isLast    = 1,
     },
-    -1,
+    ActionEnd
 };
 
 // We buffer this for a single frame.
@@ -253,7 +255,7 @@ static CPUAction Lab_CPUActionSpotdodge[] = {
         .state     = ASID_ESCAPE,
         .isLast    = 1,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionRollAway[] = {
     {
@@ -274,7 +276,7 @@ static CPUAction Lab_CPUActionRollAway[] = {
         .isLast    = 1,
         .stickDir  = STCKDIR_AWAY,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionRollTowards[] = {
     {
@@ -295,7 +297,7 @@ static CPUAction Lab_CPUActionRollTowards[] = {
         .isLast    = 1,
         .stickDir  = STCKDIR_TOWARD,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionRollRandom[] = {
     {
@@ -316,7 +318,7 @@ static CPUAction Lab_CPUActionRollRandom[] = {
         .isLast    = 1,
         .stickDir  = STICKDIR_RDM,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionNair[] = {
     {
@@ -332,7 +334,7 @@ static CPUAction Lab_CPUActionNair[] = {
         .input     = PAD_BUTTON_A,
         .isLast    = 1,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionFair[] = {
     {
@@ -349,7 +351,7 @@ static CPUAction Lab_CPUActionFair[] = {
         .isLast    = 1,
         .stickDir  = 3,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionDair[] = {
     {
@@ -365,7 +367,7 @@ static CPUAction Lab_CPUActionDair[] = {
         .cstickY   = -127,
         .isLast    = 1,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionBair[] = {
     {
@@ -382,7 +384,7 @@ static CPUAction Lab_CPUActionBair[] = {
         .isLast    = 1,
         .stickDir  = 4,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionUair[] = {
     {
@@ -398,7 +400,7 @@ static CPUAction Lab_CPUActionUair[] = {
         .cstickY   = 127,
         .isLast    = 1,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionJump[] = {
     {
@@ -414,7 +416,7 @@ static CPUAction Lab_CPUActionJump[] = {
         .state     = ASID_ACTIONABLEAIR,
         .isLast    = 1,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionJumpFull[] = {
     {
@@ -433,7 +435,7 @@ static CPUAction Lab_CPUActionJumpFull[] = {
         .state     = ASID_ACTIONABLEAIR,
         .isLast    = 1,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionJumpAway[] = {
     {
@@ -444,7 +446,7 @@ static CPUAction Lab_CPUActionJumpAway[] = {
         .stickDir  = STCKDIR_AWAY,
     },
 
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionJumpTowards[] = {
     {
@@ -455,26 +457,24 @@ static CPUAction Lab_CPUActionJumpTowards[] = {
         .stickDir  = STCKDIR_TOWARD,
     },
 
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionJumpNeutral[] = {
     {
         .state     = ASID_ACTIONABLEAIR,
         .input     = PAD_BUTTON_X,
         .isLast    = 1,
-        .stickDir  = STCKDIR_NONE,
         .custom_check = CheckHasJump,
     },
 
     // wiggle out if we can't jump
     {
-        .state     = ASID_ACTIONABLEAIR,
+        .state     = ASID_DAMAGEAIR,
         .stickX    = 127,
         .isLast    = 1,
-        .stickDir  = STCKDIR_NONE,
     },
 
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionAirdodge[] = {
     // wiggle out if we are in tumble
@@ -487,7 +487,7 @@ static CPUAction Lab_CPUActionAirdodge[] = {
         .input     = PAD_TRIGGER_R,
         .isLast    = 1,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionFFTumble[] = {
     {
@@ -496,7 +496,7 @@ static CPUAction Lab_CPUActionFFTumble[] = {
         .isLast     = 1,
         .noActAfter = 1,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionFFWiggle[] = {
     {
@@ -508,7 +508,7 @@ static CPUAction Lab_CPUActionFFWiggle[] = {
         .stickY    = -127,
         .isLast    = 1,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionJab[] = {
     {
@@ -516,7 +516,7 @@ static CPUAction Lab_CPUActionJab[] = {
         .input     = PAD_BUTTON_A,
         .isLast    = 1,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionFTilt[] = {
     {
@@ -526,7 +526,7 @@ static CPUAction Lab_CPUActionFTilt[] = {
         .isLast    = 1,
         .stickDir  = STCKDIR_TOWARD,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionUTilt[] = {
     {
@@ -535,7 +535,7 @@ static CPUAction Lab_CPUActionUTilt[] = {
         .input     = PAD_BUTTON_A,
         .isLast    = 1,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionDTilt[] = {
     {
@@ -544,7 +544,7 @@ static CPUAction Lab_CPUActionDTilt[] = {
         .input     = PAD_BUTTON_A,
         .isLast    = 1,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionUSmash[] = {
     {
@@ -552,7 +552,7 @@ static CPUAction Lab_CPUActionUSmash[] = {
         .cstickY   = 127,
         .isLast    = 1,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionDSmash[] = {
     {
@@ -560,7 +560,7 @@ static CPUAction Lab_CPUActionDSmash[] = {
         .cstickY   = -127,
         .isLast    = 1,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionFSmash[] = {
     {
@@ -569,7 +569,7 @@ static CPUAction Lab_CPUActionFSmash[] = {
         .isLast    = 1,
         .stickDir  = STCKDIR_TOWARD,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionUpSmashOOS[] = {
     {
@@ -581,7 +581,7 @@ static CPUAction Lab_CPUActionUpSmashOOS[] = {
         .cstickY   = 127,
         .isLast    = 1,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionWavedashAway[] = {
     {
@@ -600,7 +600,7 @@ static CPUAction Lab_CPUActionWavedashAway[] = {
         .stickDir  = STCKDIR_AWAY,
         .isLast    = 1,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionWavedashTowards[] = {
     {
@@ -619,7 +619,7 @@ static CPUAction Lab_CPUActionWavedashTowards[] = {
         .stickDir  = STCKDIR_TOWARD,
         .isLast    = 1,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionWavedashDown[] = {
     {
@@ -636,7 +636,7 @@ static CPUAction Lab_CPUActionWavedashDown[] = {
         .stickY    = -80,
         .isLast    = 1,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionDashAway[] = {
     {
@@ -655,7 +655,7 @@ static CPUAction Lab_CPUActionDashAway[] = {
         .stickDir  = STCKDIR_AWAY,
         .isLast    = 1,
     },
-    -1,
+    ActionEnd
 };
 static CPUAction Lab_CPUActionDashTowards[] = {
     {
@@ -674,64 +674,64 @@ static CPUAction Lab_CPUActionDashTowards[] = {
         .stickDir  = STCKDIR_TOWARD,
         .isLast    = 1,
     },
-    -1,
+    ActionEnd
 };
 
 #define RECSLOT_RANDOM 15
-static CPUAction Lab_CPUActionSlot1[] = { { .recSlot = 1 }, -1, };
-static CPUAction Lab_CPUActionSlot2[] = { { .recSlot = 2 }, -1, };
-static CPUAction Lab_CPUActionSlot3[] = { { .recSlot = 3 }, -1, };
-static CPUAction Lab_CPUActionSlot4[] = { { .recSlot = 4 }, -1, };
-static CPUAction Lab_CPUActionSlot5[] = { { .recSlot = 5 }, -1, };
-static CPUAction Lab_CPUActionSlot6[] = { { .recSlot = 6 }, -1, };
-static CPUAction Lab_CPUActionSlotRandom[] = { { .recSlot = RECSLOT_RANDOM }, -1, };
+static CPUAction Lab_CPUActionSlot1[] = { { .recSlot = 1 }, ActionEnd, };
+static CPUAction Lab_CPUActionSlot2[] = { { .recSlot = 2 }, ActionEnd, };
+static CPUAction Lab_CPUActionSlot3[] = { { .recSlot = 3 }, ActionEnd, };
+static CPUAction Lab_CPUActionSlot4[] = { { .recSlot = 4 }, ActionEnd, };
+static CPUAction Lab_CPUActionSlot5[] = { { .recSlot = 5 }, ActionEnd, };
+static CPUAction Lab_CPUActionSlot6[] = { { .recSlot = 6 }, ActionEnd, };
+static CPUAction Lab_CPUActionSlotRandom[] = { { .recSlot = RECSLOT_RANDOM }, ActionEnd, };
 
 static CPUAction *Lab_CPUActions[] = {
     0,
-    &Lab_CPUActionShield,
-    &Lab_CPUActionGrab,
-    &Lab_CPUActionUpB,
-    &Lab_CPUActionSideBToward,
-    &Lab_CPUActionSideBAway,
-    &Lab_CPUActionDownB,
-    &Lab_CPUActionNeutralB,
-    &Lab_CPUActionSpotdodge,
-    &Lab_CPUActionRollAway,
-    &Lab_CPUActionRollTowards,
-    &Lab_CPUActionRollRandom,
-    &Lab_CPUActionNair,
-    &Lab_CPUActionFair,
-    &Lab_CPUActionDair,
-    &Lab_CPUActionBair,
-    &Lab_CPUActionUair,
-    &Lab_CPUActionJump,
-    &Lab_CPUActionJumpFull,
-    &Lab_CPUActionJumpAway,
-    &Lab_CPUActionJumpTowards,
-    &Lab_CPUActionJumpNeutral,
-    &Lab_CPUActionAirdodge,
-    &Lab_CPUActionFFTumble,
-    &Lab_CPUActionFFWiggle,
-    &Lab_CPUActionJab,
-    &Lab_CPUActionFTilt,
-    &Lab_CPUActionUTilt,
-    &Lab_CPUActionDTilt,
-    &Lab_CPUActionUSmash,
-    &Lab_CPUActionDSmash,
-    &Lab_CPUActionFSmash,
-    &Lab_CPUActionUpSmashOOS,
-    &Lab_CPUActionWavedashAway,
-    &Lab_CPUActionWavedashTowards,
-    &Lab_CPUActionWavedashDown,
-    &Lab_CPUActionDashAway,
-    &Lab_CPUActionDashTowards,
-    &Lab_CPUActionSlot1,
-    &Lab_CPUActionSlot2,
-    &Lab_CPUActionSlot3,
-    &Lab_CPUActionSlot4,
-    &Lab_CPUActionSlot5,
-    &Lab_CPUActionSlot6,
-    &Lab_CPUActionSlotRandom
+    Lab_CPUActionShield,
+    Lab_CPUActionGrab,
+    Lab_CPUActionUpB,
+    Lab_CPUActionSideBToward,
+    Lab_CPUActionSideBAway,
+    Lab_CPUActionDownB,
+    Lab_CPUActionNeutralB,
+    Lab_CPUActionSpotdodge,
+    Lab_CPUActionRollAway,
+    Lab_CPUActionRollTowards,
+    Lab_CPUActionRollRandom,
+    Lab_CPUActionNair,
+    Lab_CPUActionFair,
+    Lab_CPUActionDair,
+    Lab_CPUActionBair,
+    Lab_CPUActionUair,
+    Lab_CPUActionJump,
+    Lab_CPUActionJumpFull,
+    Lab_CPUActionJumpAway,
+    Lab_CPUActionJumpTowards,
+    Lab_CPUActionJumpNeutral,
+    Lab_CPUActionAirdodge,
+    Lab_CPUActionFFTumble,
+    Lab_CPUActionFFWiggle,
+    Lab_CPUActionJab,
+    Lab_CPUActionFTilt,
+    Lab_CPUActionUTilt,
+    Lab_CPUActionDTilt,
+    Lab_CPUActionUSmash,
+    Lab_CPUActionDSmash,
+    Lab_CPUActionFSmash,
+    Lab_CPUActionUpSmashOOS,
+    Lab_CPUActionWavedashAway,
+    Lab_CPUActionWavedashTowards,
+    Lab_CPUActionWavedashDown,
+    Lab_CPUActionDashAway,
+    Lab_CPUActionDashTowards,
+    Lab_CPUActionSlot1,
+    Lab_CPUActionSlot2,
+    Lab_CPUActionSlot3,
+    Lab_CPUActionSlot4,
+    Lab_CPUActionSlot5,
+    Lab_CPUActionSlot6,
+    Lab_CPUActionSlotRandom
 };
 
 enum CPU_ACTIONS
@@ -794,9 +794,9 @@ static u8 CPUCounterActionsAir[] = {CPUACT_NONE, CPUACT_AIRDODGE, CPUACT_JUMPAWA
 
 static u8 CPUCounterActionsShield[] = {CPUACT_NONE, CPUACT_GRAB, CPUACT_SHORTHOP, CPUACT_FULLHOP, CPUACT_SPOTDODGE, CPUACT_ROLLAWAY, CPUACT_ROLLTOWARDS, CPUACT_ROLLRDM, CPUACT_USMASHOOS, CPUACT_UPB, CPUACT_DOWNB, CPUACT_NAIR, CPUACT_FAIR, CPUACT_DAIR, CPUACT_BAIR, CPUACT_UAIR, CPUACT_WAVEDASH_AWAY, CPUACT_WAVEDASH_TOWARDS, CPUACT_WAVEDASH_DOWN, SLOT_ACTIONS};
 
-static char *LabValues_CounterGround[] = {"None", "Spotdodge", "Shield", "Grab", "Up B", "Side B Toward", "Side B Away", "Down B", "Neutral B", "Up Smash", "Down Smash", "Forward Smash", "Roll Away", "Roll Towards", "Roll Random", "Neutral Air", "Forward Air", "Down Air", "Back Air", "Up Air", "Jab", "Forward Tilt", "Up Tilt", "Down Tilt", "Short Hop", "Full Hop", "Wavedash Away", "Wavedash Towards", "Wavedash Down", "Dash Back", "Dash Through", SLOT_NAMES};
-static char *LabValues_CounterAir[] = {"None", "Airdodge", "Jump Away", "Jump Towards", "Jump Neutral", "Up B", "Side B Toward", "Side B Away", "Down B", "Neutral B", "Neutral Air", "Forward Air", "Down Air", "Back Air", "Up Air", "Tumble Fastfall", "Wiggle Fastfall", SLOT_NAMES};
-static char *LabValues_CounterShield[] = {"None", "Grab", "Short Hop", "Full Hop", "Spotdodge", "Roll Away", "Roll Towards", "Roll Random", "Up Smash", "Up B", "Down B", "Neutral Air", "Forward Air", "Down Air", "Back Air", "Up Air", "Wavedash Away", "Wavedash Towards", "Wavedash Down", SLOT_NAMES};
+static const char *LabValues_CounterGround[] = {"None", "Spotdodge", "Shield", "Grab", "Up B", "Side B Toward", "Side B Away", "Down B", "Neutral B", "Up Smash", "Down Smash", "Forward Smash", "Roll Away", "Roll Towards", "Roll Random", "Neutral Air", "Forward Air", "Down Air", "Back Air", "Up Air", "Jab", "Forward Tilt", "Up Tilt", "Down Tilt", "Short Hop", "Full Hop", "Wavedash Away", "Wavedash Towards", "Wavedash Down", "Dash Back", "Dash Through", SLOT_NAMES};
+static const char *LabValues_CounterAir[] = {"None", "Airdodge", "Jump Away", "Jump Towards", "Jump Neutral", "Up B", "Side B Toward", "Side B Away", "Down B", "Neutral B", "Neutral Air", "Forward Air", "Down Air", "Back Air", "Up Air", "Tumble Fastfall", "Wiggle Fastfall", SLOT_NAMES};
+static const char *LabValues_CounterShield[] = {"None", "Grab", "Short Hop", "Full Hop", "Spotdodge", "Roll Away", "Roll Towards", "Roll Random", "Up Smash", "Up B", "Down B", "Neutral Air", "Forward Air", "Down Air", "Back Air", "Up Air", "Wavedash Away", "Wavedash Towards", "Wavedash Down", SLOT_NAMES};
 
 // MENUS ###################################################
 
@@ -817,39 +817,39 @@ enum lab_option
     OPTLAB_COUNT
 };
 
-static char *LabOptions_OffOn[] = {"Off", "On"};
-static char *LabOptions_CheckBox[] = {"", "X"};
+static const char *LabOptions_CheckBox[] = {"", "X"};
 
 static EventOption LabOptions_Main[OPTLAB_COUNT] = {
     {
         .kind = OPTKIND_MENU,
         .menu = &LabMenu_General,
         .name = "General",
-        .desc = "Toggle player percent, overlays,\nframe advance, and camera settings.",
+        .desc = {"Toggle player percent, overlays,",
+                 "frame advance, and camera settings."},
     },
     {
         .kind = OPTKIND_MENU,
         .menu = &LabMenu_CPU,
         .name = "CPU Options",
-        .desc = "Configure CPU behavior.",
+        .desc = {"Configure CPU behavior."},
     },
     {
         .kind = OPTKIND_MENU,
         .menu = &LabMenu_Record,
         .name = "Recording",
-        .desc = "Record and playback inputs.",
+        .desc = {"Record and playback inputs."},
     },
     {
         .kind = OPTKIND_MENU,
         .menu = &LabMenu_InfoDisplayHMN,
         .name = "HMN Info Display",
-        .desc = "Display various game information onscreen.",
+        .desc = {"Display various game information onscreen."},
     },
     {
         .kind = OPTKIND_MENU,
         .menu = &LabMenu_InfoDisplayCPU,
         .name = "CPU Info Display",
-        .desc = "Display various game information onscreen.",
+        .desc = {"Display various game information onscreen."},
     },
     {
         .kind = OPTKIND_MENU,
@@ -857,25 +857,27 @@ static EventOption LabOptions_Main[OPTLAB_COUNT] = {
         .disable = 1,
         //.disable is set in Event_Init depending on fighters
         .name = "Character RNG",
-        .desc = "Change RNG behavior of Peach, Luigi, GnW, and Icies.",
+        .desc = {"Change RNG behavior of Peach, Luigi, GnW, and Icies."},
     },
     {
         .kind = OPTKIND_MENU,
         .disable = 1,
         //.menu and .disable are set in Event_Init depending on stage
         .name = "Stage Options",
-        .desc = "Configure stage behavior.",
+        .desc = {"Configure stage behavior."},
     },
     {
-        .kind = OPTKIND_FUNC,
+        .kind = OPTKIND_INFO,
         .name = "Help",
-        .desc = "D-Pad Left - Load State\nD-Pad Right - Save State\nD-Pad Down - Move CPU\nHold R in the menu for turbo.",
-        .OnChange = Lab_Exit,
+        .desc = {"D-Pad Left - Load State",
+                 "D-Pad Right - Save State",
+                 "D-Pad Down - Move CPU",
+                 "Hold R in the menu for turbo."},
     },
     {
         .kind = OPTKIND_FUNC,
         .name = "Exit",
-        .desc = "Return to the Event Select Screen.",
+        .desc = {"Return to the Event Select Screen."},
         .OnSelect = Lab_Exit,
     },
 };
@@ -883,7 +885,7 @@ static EventOption LabOptions_Main[OPTLAB_COUNT] = {
 static EventMenu LabMenu_Main = {
     .name = "Main Menu",
     .option_num = sizeof(LabOptions_Main) / sizeof(EventOption),
-    .options = &LabOptions_Main,
+    .options = LabOptions_Main,
     .shortcuts = &Lab_ShortcutList,
 };
 
@@ -928,31 +930,30 @@ enum gen_option
     OPTGEN_COUNT
 };
 
-static char *LabOptions_CamMode[] = {"Normal", "Zoom", "Fixed", "Advanced", "Static"};
-static char *LabOptions_ShowInputs[] = {"Off", "HMN", "CPU", "HMN and CPU"};
-static char *LabOptions_FrameAdvButton[] = {"L", "Z", "X", "Y", "R"};
+static const char *LabOptions_CamMode[] = {"Normal", "Zoom", "Fixed", "Advanced", "Static"};
+static const char *LabOptions_ShowInputs[] = {"Off", "HMN", "CPU", "HMN and CPU"};
+static const char *LabOptions_FrameAdvButton[] = {"L", "Z", "X", "Y", "R"};
 
-static char *LabOptions_ModelDisplay[] = {"On", "Stage Only", "Characters Only"};
+static const char *LabOptions_ModelDisplay[] = {"On", "Stage Only", "Characters Only"};
 static const bool LabValues_CharacterModelDisplay[] = {true, false, true};
 static const bool LabValues_StageModelDisplay[] = {true, true, false};
 
 static float LabOptions_GameSpeeds[] = {1.f, 5.f/6.f, 2.f/3.f, 1.f/2.f, 1.f/4.f};
-static char *LabOptions_GameSpeedText[] = {"1", "5/6", "2/3", "1/2", "1/4"};
+static const char *LabOptions_GameSpeedText[] = {"1", "5/6", "2/3", "1/2", "1/4"};
 
 static EventOption LabOptions_General[OPTGEN_COUNT] = {
     {
-        .kind = OPTKIND_STRING,
-        .value_num = sizeof(LabOptions_OffOn) / 4,
+        .kind = OPTKIND_TOGGLE,
         .name = "Frame Advance",
-        .desc = "Enable frame advance. Press to advance one\nframe. Hold to advance at normal speed.",
-        .values = LabOptions_OffOn,
+        .desc = {"Enable frame advance. Press to advance one",
+                 "frame. Hold to advance at normal speed."},
         .OnChange = Lab_ChangeFrameAdvance,
     },
     {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabOptions_FrameAdvButton) / 4,
         .name = "Frame Advance Button",
-        .desc = "Choose which button will advance the frame",
+        .desc = {"Choose which button will advance the frame"},
         .values = LabOptions_FrameAdvButton,
         .OnChange = Lab_ChangeFrameAdvanceButton,
         .disable = 1,
@@ -961,56 +962,57 @@ static EventOption LabOptions_General[OPTGEN_COUNT] = {
         .kind = OPTKIND_INT,
         .value_num = 999,
         .name = "Player Percent",
-        .desc = "Adjust the player's percent.",
-        .values = "%d%%",
+        .desc = {"Adjust the player's percent."},
+        .format = "%d%%",
         .OnChange = Lab_ChangePlayerPercent,
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = 2,
+        .kind = OPTKIND_TOGGLE,
         .name = "Lock Player Percent",
-        .desc = "Locks Player percent to current percent",
-        .values = LabOptions_OffOn,
+        .desc = {"Locks Player percent to current percent"},
         .OnChange = Lab_ChangePlayerLockPercent,
     },
     {
         .kind = OPTKIND_STRING,
-        .value_num = sizeof(LabOptions_ModelDisplay)/sizeof(*LabOptions_ModelDisplay),
+        .value_num =
+            sizeof(LabOptions_ModelDisplay) / sizeof(*LabOptions_ModelDisplay),
         .val = 0,
         .name = "Model Display",
-        .desc = "Toggle player and item model visibility.",
+        .desc = {"Toggle player and item model visibility."},
         .values = LabOptions_ModelDisplay,
         .OnChange = Lab_ChangeModelDisplay,
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = 2,
+        .kind = OPTKIND_TOGGLE,
         .name = "Fighter Collision",
-        .desc = "Toggle hitbox and hurtbox visualization.\nHurtboxes: yellow=hurt, purple=ungrabbable, blue=shield.\nHitboxes: (by priority) red, green, blue, purple.",
-        .values = LabOptions_OffOn,
+        .desc = {"Toggle hitbox and hurtbox visualization.",
+                 "Hurtboxes: yellow=hurt, purple=ungrabbable, blue=shield.",
+                 "Hitboxes: (by priority) red, green, blue, purple."},
         .OnChange = Lab_ChangeHitDisplay,
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = 2,
+        .kind = OPTKIND_TOGGLE,
         .name = "Item Grab Sizes",
-        .desc = "Toggle item grab range visualization.\nBlue=z-catch, light grey=grounded catch,\ndark grey=unknown",
-        .values = LabOptions_OffOn,
+        .desc = {"Toggle item grab range visualization.",
+                 "Blue=z-catch, light grey=grounded catch,",
+                 "dark grey=unknown"},
         .OnChange = Lab_ChangeItemGrabDisplay,
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = 2,
+        .kind = OPTKIND_TOGGLE,
         .name = "Environment Collision",
-        .desc = "Toggle environment collision visualization.\nAlso displays the players' ECB (environmental \ncollision box).",
-        .values = LabOptions_OffOn,
+        .desc = {"Toggle environment collision visualization.",
+                 "Also displays the players' ECB (environmental ",
+                 "collision box)."},
         .OnChange = Lab_ChangeEnvCollDisplay,
     },
     {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabOptions_CamMode) / 4,
         .name = "Camera Mode",
-        .desc = "Adjust the camera's behavior.\nIn advanced mode, use C-Stick while holding\nA/B/Y to pan, rotate and zoom, respectively.",
+        .desc = {"Adjust the camera's behavior.",
+                 "In advanced mode, use C-Stick while holding",
+                 "A/B/Y to pan, rotate and zoom, respectively."},
         .values = LabOptions_CamMode,
         .OnChange = Lab_ChangeCamMode,
     },
@@ -1018,87 +1020,83 @@ static EventOption LabOptions_General[OPTGEN_COUNT] = {
         .kind = OPTKIND_MENU,
         .menu = &LabMenu_OverlaysHMN,
         .name = "HMN Color Overlays",
-        .desc = "Set up color indicators for\n action states.",
+        .desc = {"Set up color indicators for",
+                 "action states."},
     },
     {
         .kind = OPTKIND_MENU,
         .menu = &LabMenu_OverlaysCPU,
         .name = "CPU Color Overlays",
-        .desc = "Set up color indicators for\n action states.",
+        .desc = {"Set up color indicators for",
+                 "action states."},
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = 2,
+        .kind = OPTKIND_TOGGLE,
         .val = 1,
         .name = "HUD",
-        .desc = "Toggle player percents and timer visibility.",
-        .values = LabOptions_OffOn,
+        .desc = {"Toggle player percents and timer visibility."},
         .OnChange = Lab_ChangeHUD,
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = 2,
+        .kind = OPTKIND_TOGGLE,
         .name = "DI Display",
-        .desc = "Display knockback trajectories.\nUse frame advance to see the effects of DI\nin realtime during hitstop.",
-        .values = LabOptions_OffOn,
+        .desc = {"Display knockback trajectories.",
+                 "Use frame advance to see the effects of DI",
+                 "in realtime during hitstop."},
     },
     {
         .kind = OPTKIND_STRING,
-        .value_num = sizeof(LabOptions_ShowInputs) / sizeof(*LabOptions_ShowInputs),
+        .value_num =
+            sizeof(LabOptions_ShowInputs) / sizeof(*LabOptions_ShowInputs),
         .name = "Input Display",
-        .desc = "Display player inputs onscreen.",
+        .desc = {"Display player inputs onscreen."},
         .values = LabOptions_ShowInputs,
         .OnChange = Lab_ChangeInputDisplay,
     },
     {
         .kind = OPTKIND_STRING,
-        .value_num = sizeof(LabOptions_GameSpeedText) / sizeof(*LabOptions_GameSpeedText),
+        .value_num = sizeof(LabOptions_GameSpeedText) /
+                     sizeof(*LabOptions_GameSpeedText),
         .name = "Game Speed",
-        .desc = "Change how fast the game engine runs.",
+        .desc = {"Change how fast the game engine runs."},
         .values = LabOptions_GameSpeedText,
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = 2,
+        .kind = OPTKIND_TOGGLE,
         .val = 1,
         .name = "Move Staling",
-        .desc = "Toggle the staling of moves. Attacks become \nweaker the more they are used.",
-        .values = LabOptions_OffOn,
+        .desc = {"Toggle the staling of moves. Attacks become ",
+                 "weaker the more they are used."},
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = 2,
+        .kind = OPTKIND_TOGGLE,
         .name = "Powershield Projectiles",
-        .desc = "Projectiles will always be reflected when shielded.",
-        .values = LabOptions_OffOn,
+        .desc = {"Projectiles will always be reflected when shielded."},
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = 2,
+        .kind = OPTKIND_TOGGLE,
         .val = 1,
         .name = "Disable Taunt",
-        .desc = "Disable the taunt button (D-pad up)",
-        .values = LabOptions_OffOn,
+        .desc = {"Disable the taunt button (D-pad up)"},
         .OnChange = Lab_ChangeTauntEnabled,
     },
     {
         .kind = OPTKIND_MENU,
         .menu = &LabMenu_CustomOSDs,
         .name = "Custom OSDs",
-        .desc = "Set up a display for any action state.",
+        .desc = {"Set up a display for any action state."},
     },
     {
         .kind = OPTKIND_MENU,
         .menu = &LabMenu_OSDs,
         .name = "OSD Menu",
-        .desc = "Enable/disable OSDs",
+        .desc = {"Enable/disable OSDs"},
     },
 };
 static EventMenu LabMenu_General = {
     .name = "General",
     .option_num = sizeof(LabOptions_General) / sizeof(EventOption),
-    .options = &LabOptions_General,
-    .shortcuts = &Lab_ShortcutList,
+    .options = LabOptions_General,
 };
 
 // INFO DISPLAY MENU --------------------------------------------------------------
@@ -1156,12 +1154,12 @@ enum info_disp_option
 
 #define OPTINF_ROW_COUNT (OPTINF_COUNT - OPTINF_ROW1)
 
-static char *LabValues_InfoDisplay[INFDISP_COUNT] = {"None", "Position", "State Name", "State Frame", "Velocity - Self", "Velocity - KB", "Velocity - Total", "Engine LStick", "System LStick", "Engine CStick", "System CStick", "Engine Trigger", "System Trigger", "Ledgegrab Timer", "Intangibility Timer", "Hitlag", "Hitstun", "Shield Health", "Shield Stun", "Grip Strength", "ECB Lock", "ECB Bottom", "Jumps", "Walljumps", "Can Walljump", "Jab Counter", "Line Info", "Blastzone Left/Right", "Blastzone Up/Down"};
+static const char *LabValues_InfoDisplay[INFDISP_COUNT] = {"None", "Position", "State Name", "State Frame", "Velocity - Self", "Velocity - KB", "Velocity - Total", "Engine LStick", "System LStick", "Engine CStick", "System CStick", "Engine Trigger", "System Trigger", "Ledgegrab Timer", "Intangibility Timer", "Hitlag", "Hitstun", "Shield Health", "Shield Stun", "Grip Strength", "ECB Lock", "ECB Bottom", "Jumps", "Walljumps", "Can Walljump", "Jab Counter", "Line Info", "Blastzone Left/Right", "Blastzone Up/Down"};
 
-static char *LabValues_InfoSizeText[] = {"Small", "Medium", "Large"};
+static const char *LabValues_InfoSizeText[] = {"Small", "Medium", "Large"};
 static float LabValues_InfoSizes[] = {0.7, 0.85, 1.0};
 
-static char *LabValues_InfoPresets[] = {"None", "State", "Ledge", "Damage"};
+static const char *LabValues_InfoPresets[] = {"None", "State", "Ledge", "Damage"};
 static int LabValues_InfoPresetStates[][OPTINF_ROW_COUNT] = {
     // None
     { 0 },
@@ -1206,7 +1204,7 @@ static EventOption LabOptions_InfoDisplayDefault[OPTINF_COUNT] = {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabValues_InfoPresets) / 4,
         .name = "Display Preset",
-        .desc = "Choose between pre-configured selections.",
+        .desc = {"Choose between pre-configured selections."},
         .values = LabValues_InfoPresets,
 
         // set as Lab_ChangeInfoPresetHMN/CPU after memcpy.
@@ -1217,63 +1215,65 @@ static EventOption LabOptions_InfoDisplayDefault[OPTINF_COUNT] = {
         .value_num = sizeof(LabValues_InfoSizeText) / 4,
         .val = 1,
         .name = "Size",
-        .desc = "Change the size of the info display window.\nLarge is recommended for CRT.\nMedium/Small recommended for Dolphin Emulator.",
+        .desc = {"Change the size of the info display window.",
+                 "Large is recommended for CRT.",
+                 "Medium/Small recommended for Dolphin Emulator."},
         .values = LabValues_InfoSizeText,
     },
     {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabValues_InfoDisplay) / 4,
         .name = "Row 1",
-        .desc = "Adjust what is displayed in this row.",
+        .desc = {"Adjust what is displayed in this row."},
         .values = LabValues_InfoDisplay,
     },
     {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabValues_InfoDisplay) / 4,
         .name = "Row 2",
-        .desc = "Adjust what is displayed in this row.",
+        .desc = {"Adjust what is displayed in this row."},
         .values = LabValues_InfoDisplay,
     },
     {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabValues_InfoDisplay) / 4,
         .name = "Row 3",
-        .desc = "Adjust what is displayed in this row.",
+        .desc = {"Adjust what is displayed in this row."},
         .values = LabValues_InfoDisplay,
     },
     {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabValues_InfoDisplay) / 4,
         .name = "Row 4",
-        .desc = "Adjust what is displayed in this row.",
+        .desc = {"Adjust what is displayed in this row."},
         .values = LabValues_InfoDisplay,
     },
     {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabValues_InfoDisplay) / 4,
         .name = "Row 5",
-        .desc = "Adjust what is displayed in this row.",
+        .desc = {"Adjust what is displayed in this row."},
         .values = LabValues_InfoDisplay,
     },
     {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabValues_InfoDisplay) / 4,
         .name = "Row 6",
-        .desc = "Adjust what is displayed in this row.",
+        .desc = {"Adjust what is displayed in this row."},
         .values = LabValues_InfoDisplay,
     },
     {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabValues_InfoDisplay) / 4,
         .name = "Row 7",
-        .desc = "Adjust what is displayed in this row.",
+        .desc = {"Adjust what is displayed in this row."},
         .values = LabValues_InfoDisplay,
     },
     {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabValues_InfoDisplay) / 4,
         .name = "Row 8",
-        .desc = "Adjust what is displayed in this row.",
+        .desc = {"Adjust what is displayed in this row."},
         .values = LabValues_InfoDisplay,
     },
 };
@@ -1281,15 +1281,13 @@ static EventOption LabOptions_InfoDisplayDefault[OPTINF_COUNT] = {
 static EventMenu LabMenu_InfoDisplayHMN = {
     .name = "HMN Info Display",
     .option_num = sizeof(LabOptions_InfoDisplayHMN) / sizeof(EventOption),
-    .options = &LabOptions_InfoDisplayHMN,
-    .shortcuts = &Lab_ShortcutList,
+    .options = LabOptions_InfoDisplayHMN,
 };
 
 static EventMenu LabMenu_InfoDisplayCPU = {
     .name = "CPU Info Display",
     .option_num = sizeof(LabOptions_InfoDisplayCPU) / sizeof(EventOption),
-    .options = &LabOptions_InfoDisplayCPU,
-    .shortcuts = &Lab_ShortcutList,
+    .options = LabOptions_InfoDisplayCPU,
 };
 
 // CHARACTER RNG MENU --------------------------------------------------------
@@ -1309,7 +1307,7 @@ static EventOption LabOptions_CharacterRngPeach[] = {
     {
         .kind = OPTKIND_STRING,
         .name = "Peach Turnip",
-        .desc = "Choose the turnip or item Peach will pull.",
+        .desc = {"Choose the turnip or item Peach will pull."},
         .value_num = countof(LabValues_CharacterRng_Turnip),
         .values = LabValues_CharacterRng_Turnip,
         .OnChange = Lab_ChangeCharacterRng_Turnip,
@@ -1317,7 +1315,7 @@ static EventOption LabOptions_CharacterRngPeach[] = {
     {
         .kind = OPTKIND_STRING,
         .name = "Peach Forward Smash",
-        .desc = "Choose what Peach will use in her Forward Smash.",
+        .desc = {"Choose what Peach will use in her Forward Smash."},
         .value_num = countof(LabValues_CharacterRng_PeachFSmash),
         .values = LabValues_CharacterRng_PeachFSmash,
         .OnChange = Lab_ChangeCharacterRng_PeachFSmash,
@@ -1327,7 +1325,7 @@ static EventOption LabOptions_CharacterRngLuigi[] = {
     {
         .kind = OPTKIND_STRING,
         .name = "Luigi Misfire",
-        .desc = "Choose if Luigi's SideB will misfire.",
+        .desc = {"Choose if Luigi's SideB will misfire."},
         .value_num = countof(LabValues_CharacterRng_Misfire),
         .values = LabValues_CharacterRng_Misfire,
         .OnChange = Lab_ChangeCharacterRng_Misfire,
@@ -1337,7 +1335,7 @@ static EventOption LabOptions_CharacterRngGnW[] = {
     {
         .kind = OPTKIND_STRING,
         .name = "GnW Hammer",
-        .desc = "Choose Game and Watch's SideB number.",
+        .desc = {"Choose Game and Watch's SideB number."},
         .value_num = countof(LabValues_CharacterRng_Hammer),
         .values = LabValues_CharacterRng_Hammer,
         .OnChange = Lab_ChangeCharacterRng_Hammer,
@@ -1347,7 +1345,7 @@ static EventOption LabOptions_CharacterRngIcies[] = {
     {
         .kind = OPTKIND_STRING,
         .name = "Nana Throw",
-        .desc = "Choose Nana's throw direction.",
+        .desc = {"Choose Nana's throw direction."},
         .value_num = countof(LabValues_CharacterRng_NanaThrow),
         .values = LabValues_CharacterRng_NanaThrow,
         .OnChange = Lab_ChangeCharacterRng_NanaThrow,
@@ -1358,7 +1356,6 @@ static EventOption LabOptions_CharacterRngIcies[] = {
 static EventMenu LabMenu_CharacterRng = {
     .name = "Character RNG",
     .options = (EventOption[OPTCHARRNG_MAXCOUNT]){},
-    .shortcuts = &Lab_ShortcutList,
 };
 
 // CHARACTER RNG OPTIONS TABLE --------------------------------------------------------
@@ -1388,24 +1385,24 @@ enum stage_stadium_option
     OPTSTAGE_STADIUM_COUNT,
 };
 
-static char *LabValues_StadiumTransformation[] = { "Normal", "Fire", "Grass", "Rock", "Water" };
+static const char *LabValues_StadiumTransformation[] = { "Normal", "Fire", "Grass", "Rock", "Water" };
 
-static EventOption LabOptions_Stage_Stadium[OPTSTAGE_STADIUM_COUNT] = {
-    {
-        .kind = OPTKIND_STRING,
-        .value_num = sizeof(LabValues_StadiumTransformation)/sizeof(*LabValues_StadiumTransformation),
-        .name = "Transformation",
-        .desc = "Set the current Pokemon Stadium transformation.\nRequires Stage Hazards to be on.\nTHIS OPTION IS EXPERMIMENTAL AND HAS ISSUES.",
-        .values = LabValues_StadiumTransformation,
-        .OnChange = Lab_ChangeStadiumTransformation,
-    }
-};
+static EventOption LabOptions_Stage_Stadium[OPTSTAGE_STADIUM_COUNT] = {{
+    .kind = OPTKIND_STRING,
+    .value_num = sizeof(LabValues_StadiumTransformation) /
+                 sizeof(*LabValues_StadiumTransformation),
+    .name = "Transformation",
+    .desc = {"Set the current Pokemon Stadium transformation.",
+             "Requires Stage Hazards to be on.",
+             "THIS OPTION IS EXPERMIMENTAL AND HAS ISSUES."},
+    .values = LabValues_StadiumTransformation,
+    .OnChange = Lab_ChangeStadiumTransformation,
+}};
 
 static EventMenu LabMenu_Stage_Stadium = {
     .name = "Stage Options",
     .option_num = sizeof(LabOptions_Stage_Stadium) / sizeof(EventOption),
-    .options = &LabOptions_Stage_Stadium,
-    .shortcuts = &Lab_ShortcutList,
+    .options = LabOptions_Stage_Stadium,
 };
 
 // STAGE MENU FOD --------------------------------------------------------
@@ -1425,14 +1422,14 @@ static EventOption LabOptions_Stage_FOD[OPTSTAGE_FOD_COUNT] = {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabValues_FODPlatformHeights)/sizeof(*LabValues_FODPlatformHeights),
         .name = "Left Platform Height",
-        .desc = "Adjust the left platform's distance from the ground.",
+        .desc = {"Adjust the left platform's distance from the ground."},
         .values = LabValues_FODPlatform,
     },
     {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabValues_FODPlatformHeights)/sizeof(*LabValues_FODPlatformHeights),
         .name = "Right Platform Height",
-        .desc = "Adjust the right platform's distance from the ground.",
+        .desc = {"Adjust the right platform's distance from the ground."},
         .values = LabValues_FODPlatform,
     }
 };
@@ -1440,13 +1437,12 @@ static EventOption LabOptions_Stage_FOD[OPTSTAGE_FOD_COUNT] = {
 static EventMenu LabMenu_Stage_FOD = {
     .name = "Stage Options",
     .option_num = sizeof(LabOptions_Stage_FOD) / sizeof(EventOption),
-    .options = &LabOptions_Stage_FOD,
-    .shortcuts = &Lab_ShortcutList,
+    .options = LabOptions_Stage_FOD,
 };
 
 // STAGE MENU TABLE --------------------------------------------------------
 
-static const EventMenu *stage_menus[] = {
+static EventMenu *stage_menus[] = {
     0,                          // GRKINDEXT_DUMMY,
     0,                          // GRKINDEXT_TEST,
     &LabMenu_Stage_FOD,         // GRKINDEXT_IZUMI,
@@ -1497,7 +1493,8 @@ static EventOption LabOptions_CustomOSDs[OPTCUSTOMOSD_MAX_COUNT] = {
     {
         .kind = OPTKIND_FUNC,
         .name = "Add Custom OSD",
-        .desc = "Add a new OSD based on the player's\ncurrent action state.",
+        .desc = {"Add a new OSD based on the player's",
+                 "current action state."},
         .OnSelect = Lab_AddCustomOSD,
     },
     { .disable = true },
@@ -1513,8 +1510,7 @@ static EventOption LabOptions_CustomOSDs[OPTCUSTOMOSD_MAX_COUNT] = {
 static EventMenu LabMenu_CustomOSDs = {
     .name = "Custom OSDs",
     .option_num = OPTCUSTOMOSD_MAX_COUNT,
-    .options = &LabOptions_CustomOSDs,
-    .shortcuts = &Lab_ShortcutList,
+    .options = LabOptions_CustomOSDs,
 };
 
 // OSDS MENU --------------------------------------------------------------
@@ -1544,159 +1540,100 @@ static int osd_memory_bit_position[] = {
     28, // Act OoHitstun
 };
 
-static char *LabValues_OSDs[] = {"Off", "On"};
-
 static EventOption LabOptions_OSDs[] = {
     {
-        .kind = OPTKIND_STRING,
-        .value_num = sizeof(LabValues_OSDs) / 4,
+        .kind = OPTKIND_TOGGLE,
         .name = "Wavedash",
-        .desc = "",
-        .values = LabValues_OSDs,
         .OnChange = Lab_ChangeOSDs,
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = sizeof(LabValues_OSDs) / 4,
+        .kind = OPTKIND_TOGGLE,
         .name = "L-Cancel",
-        .desc = "",
-        .values = LabValues_OSDs,
         .OnChange = Lab_ChangeOSDs,
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = sizeof(LabValues_OSDs) / 4,
+        .kind = OPTKIND_TOGGLE,
         .name = "Act OoS Frame",
-        .desc = "",
-        .values = LabValues_OSDs,
         .OnChange = Lab_ChangeOSDs,
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = sizeof(LabValues_OSDs) / 4,
+        .kind = OPTKIND_TOGGLE,
         .name = "Dashback",
-        .desc = "",
-        .values = LabValues_OSDs,
         .OnChange = Lab_ChangeOSDs,
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = sizeof(LabValues_OSDs) / 4,
+        .kind = OPTKIND_TOGGLE,
         .name = "Fighter-specific Tech",
-        .desc = "",
-        .values = LabValues_OSDs,
         .OnChange = Lab_ChangeOSDs,
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = sizeof(LabValues_OSDs) / 4,
+        .kind = OPTKIND_TOGGLE,
         .name = "Powershield Frame",
-        .desc = "",
-        .values = LabValues_OSDs,
         .OnChange = Lab_ChangeOSDs,
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = sizeof(LabValues_OSDs) / 4,
+        .kind = OPTKIND_TOGGLE,
         .name = "SDI Inputs",
-        .desc = "",
-        .values = LabValues_OSDs,
         .OnChange = Lab_ChangeOSDs,
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = sizeof(LabValues_OSDs) / 4,
+        .kind = OPTKIND_TOGGLE,
         .name = "Lockout Timers",
-        .desc = "",
-        .values = LabValues_OSDs,
         .OnChange = Lab_ChangeOSDs,
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = sizeof(LabValues_OSDs) / 4,
+        .kind = OPTKIND_TOGGLE,
         .name = "Item Throw Interrupts",
-        .desc = "",
-        .values = LabValues_OSDs,
         .OnChange = Lab_ChangeOSDs,
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = sizeof(LabValues_OSDs) / 4,
+        .kind = OPTKIND_TOGGLE,
         .name = "Boost Grab",
-        .desc = "",
-        .values = LabValues_OSDs,
         .OnChange = Lab_ChangeOSDs,
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = sizeof(LabValues_OSDs) / 4,
+        .kind = OPTKIND_TOGGLE,
         .name = "Act OoLag",
-        .desc = "",
-        .values = LabValues_OSDs,
         .OnChange = Lab_ChangeOSDs,
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = sizeof(LabValues_OSDs) / 4,
+        .kind = OPTKIND_TOGGLE,
         .name = "Act OoAirborne",
-        .desc = "",
-        .values = LabValues_OSDs,
         .OnChange = Lab_ChangeOSDs,
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = sizeof(LabValues_OSDs) / 4,
+        .kind = OPTKIND_TOGGLE,
         .name = "Jump Cancel Timing",
-        .desc = "",
-        .values = LabValues_OSDs,
         .OnChange = Lab_ChangeOSDs,
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = sizeof(LabValues_OSDs) / 4,
+        .kind = OPTKIND_TOGGLE,
         .name = "Fastfall Timing",
-        .desc = "",
-        .values = LabValues_OSDs,
         .OnChange = Lab_ChangeOSDs,
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = sizeof(LabValues_OSDs) / 4,
+        .kind = OPTKIND_TOGGLE,
         .name = "Frame Advantage",
-        .desc = "",
-        .values = LabValues_OSDs,
         .OnChange = Lab_ChangeOSDs,
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = sizeof(LabValues_OSDs) / 4,
+        .kind = OPTKIND_TOGGLE,
         .name = "Combo Counter",
-        .desc = "",
-        .values = LabValues_OSDs,
         .OnChange = Lab_ChangeOSDs,
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = sizeof(LabValues_OSDs) / 4,
+        .kind = OPTKIND_TOGGLE,
         .name = "Grab Breakout",
-        .desc = "",
-        .values = LabValues_OSDs,
         .OnChange = Lab_ChangeOSDs,
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = sizeof(LabValues_OSDs) / 4,
+        .kind = OPTKIND_TOGGLE,
         .name = "Ledgedash Info",
-        .desc = "",
-        .values = LabValues_OSDs,
         .OnChange = Lab_ChangeOSDs,
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = sizeof(LabValues_OSDs) / 4,
+        .kind = OPTKIND_TOGGLE,
         .name = "Act OoHitstun",
-        .desc = "",
-        .values = LabValues_OSDs,
         .OnChange = Lab_ChangeOSDs,
     },
 };
@@ -1704,7 +1641,7 @@ static EventOption LabOptions_OSDs[] = {
 static EventMenu LabMenu_OSDs = {
     .name = "OSDs",
     .option_num = sizeof(LabOptions_OSDs) / sizeof(EventOption),
-    .options = &LabOptions_OSDs,
+    .options = LabOptions_OSDs,
 };
 
 // CPU MENU --------------------------------------------------------------
@@ -1880,30 +1817,29 @@ enum cpu_option
     OPTCPU_COUNT
 };
 
-static char *LabValues_Shield[] = {"Off", "On Until Hit", "On"};
-static char *LabValues_ShieldDir[] = {"Neutral", "Up", "Towards", "Down", "Away"};
-static char *LabValues_CPUBehave[] = {"Stand", "Shield", "Crouch", "Jump"};
-static char *LabValues_TDI[] = {"Random", "Inwards", "Outwards", "Custom", "Random Custom", "None"};
-static char *LabValues_ASDI[] = {"None", "Auto", "Away", "Towards", "Left", "Right", "Up", "Down"};
-static char *LabValues_SDIDir[] = {"Random", "Away", "Towards", "Up", "Down", "Left", "Right"};
-static char *LabValues_Tech[] = {"Random", "In Place", "Away", "Towards", "None"};
-static char *LabValues_Getup[] = {"Random", "Stand", "Away", "Towards", "Attack"};
-static char *LabValues_GrabEscape[] = {"None", "Medium", "High", "Perfect"};
-static char *LabValues_GrabRelease[] = {"Grounded", "Airborn"};
-static char *LabValues_LockCPUPercent[] = {"Off", "On"};
-static char *LabValues_CPUControlledBy[] = {"None", "Port 1", "Port 2", "Port 3", "Port 4"};
+static const char *LabValues_Shield[] = {"Off", "On Until Hit", "On"};
+static const char *LabValues_ShieldDir[] = {"Neutral", "Up", "Towards", "Down", "Away"};
+static const char *LabValues_CPUBehave[] = {"Stand", "Shield", "Crouch", "Jump"};
+static const char *LabValues_TDI[] = {"Random", "Inwards", "Outwards", "Custom", "Random Custom", "None"};
+static const char *LabValues_ASDI[] = {"None", "Auto", "Away", "Towards", "Left", "Right", "Up", "Down"};
+static const char *LabValues_SDIDir[] = {"Random", "Away", "Towards", "Up", "Down", "Left", "Right"};
+static const char *LabValues_Tech[] = {"Random", "In Place", "Away", "Towards", "None"};
+static const char *LabValues_Getup[] = {"Random", "Stand", "Away", "Towards", "Attack"};
+static const char *LabValues_GrabEscape[] = {"None", "Medium", "High", "Perfect"};
+static const char *LabValues_GrabRelease[] = {"Grounded", "Airborn"};
+static const char *LabValues_CPUControlledBy[] = {"None", "Port 1", "Port 2", "Port 3", "Port 4"};
 
 static const EventOption LabOptions_CPU_MoveCPU = {
     .kind = OPTKIND_FUNC,
     .name = "Move CPU",
-    .desc = "Manually set the CPU's position.",
+    .desc = {"Manually set the CPU's position."},
     .OnSelect = Lab_StartMoveCPU,
 };
 
 static const EventOption LabOptions_CPU_FinishMoveCPU = {
     .kind = OPTKIND_FUNC,
     .name = "Finish Moving CPU",
-    .desc = "Finish setting the CPU's position.",
+    .desc = {"Finish setting the CPU's position."},
     .OnSelect = Lab_FinishMoveCPU,
 };
 
@@ -1912,49 +1848,51 @@ static EventOption LabOptions_CPU[OPTCPU_COUNT] = {
         .kind = OPTKIND_INT,
         .value_num = 999,
         .name = "CPU Percent",
-        .desc = "Adjust the CPU's percent.",
-        .values = "%d%%",
+        .desc = {"Adjust the CPU's percent."},
+        .format = "%d%%",
         .OnChange = Lab_ChangeCPUPercent,
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = 2,
+        .kind = OPTKIND_TOGGLE,
         .name = "Lock CPU Percent",
-        .desc = "Locks CPU percent to current percent",
-        .values = LabValues_LockCPUPercent,
+        .desc = {"Locks CPU percent to current percent"},
         .OnChange = Lab_ChangeCPULockPercent,
     },
     {
         .kind = OPTKIND_MENU,
         .menu = &LabMenu_Tech,
         .name = "Tech Options",
-        .desc = "Configure CPU Tech Behavior.",
+        .desc = {"Configure CPU Tech Behavior."},
     },
     {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabValues_TDI) / 4,
         .name = "Trajectory DI",
-        .desc = "Adjust how the CPU will alter their knockback\ntrajectory.",
+        .desc = {"Adjust how the CPU will alter their knockback",
+                 "trajectory."},
         .values = LabValues_TDI,
     },
     {
         .kind = OPTKIND_FUNC,
         .name = "Custom TDI",
-        .desc = "Create custom trajectory DI values for the\nCPU to perform.",
+        .desc = {"Create custom trajectory DI values for the",
+                 "CPU to perform."},
         .OnSelect = Lab_SelectCustomTDI,
     },
     {
         .kind = OPTKIND_INT,
         .value_num = 8,
         .name = "Smash DI Amount",
-        .desc = "Adjust how often the CPU will alter their position\nduring hitstop.",
-        .values = "%d Frames",
+        .desc = {"Adjust how often the CPU will alter their position",
+                 "during hitstop."},
+        .format = "%d Frames",
     },
     {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabValues_SDIDir) / 4,
         .name = "Smash DI Direction",
-        .desc = "Adjust the direction in which the CPU will alter \ntheir position during hitstop.",
+        .desc = {"Adjust the direction in which the CPU will alter ",
+                 "their position during hitstop."},
         .values = LabValues_SDIDir,
     },
     {
@@ -1962,14 +1900,14 @@ static EventOption LabOptions_CPU[OPTCPU_COUNT] = {
         .value_num = sizeof(LabValues_ASDI) / 4,
         .val = 1,
         .name = "ASDI",
-        .desc = "Set CPU C-stick ASDI direction",
+        .desc = {"Set CPU C-stick ASDI direction"},
         .values = LabValues_ASDI,
     },
     {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabValues_CPUBehave) / 4,
         .name = "Behavior",
-        .desc = "Adjust the CPU's default action.",
+        .desc = {"Adjust the CPU's default action."},
         .values = LabValues_CPUBehave,
     },
     {
@@ -1977,7 +1915,8 @@ static EventOption LabOptions_CPU[OPTCPU_COUNT] = {
         .value_num = sizeof(LabValues_CounterGround) / 4,
         .val = 1,
         .name = "Counter Action (Ground)",
-        .desc = "Select the action to be performed after a\ngrounded CPU's hitstun ends.",
+        .desc = {"Select the action to be performed after a",
+                 "grounded CPU's hitstun ends."},
         .values = LabValues_CounterGround,
     },
     {
@@ -1985,7 +1924,8 @@ static EventOption LabOptions_CPU[OPTCPU_COUNT] = {
         .value_num = sizeof(LabValues_CounterAir) / 4,
         .val = 4,
         .name = "Counter Action (Air)",
-        .desc = "Select the action to be performed after an\nairborne CPU's hitstun ends.",
+        .desc = {"Select the action to be performed after an",
+                 "airborne CPU's hitstun ends."},
         .values = LabValues_CounterAir,
     },
     {
@@ -1993,28 +1933,30 @@ static EventOption LabOptions_CPU[OPTCPU_COUNT] = {
         .value_num = sizeof(LabValues_CounterShield) / 4,
         .val = 1,
         .name = "Counter Action (Shield)",
-        .desc = "Select the action to be performed after the\nCPU's shield is hit.",
+        .desc = {"Select the action to be performed after the",
+                 "CPU's shield is hit."},
         .values = LabValues_CounterShield,
     },
     {
         .kind = OPTKIND_INT,
         .value_num = 100,
         .name = "Counter Delay",
-        .desc = "Adjust the amount of actionable frames before \nthe CPU counters.",
-        .values = "%d Frames",
+        .desc = {"Adjust the amount of actionable frames before ",
+                 "the CPU counters."},
+        .format = "%d Frames",
     },
     {
         .kind = OPTKIND_MENU,
         .menu = &LabMenu_AdvCounter,
         .name = "Advanced Counter Options",
-        .desc = "More options for adjusting how the CPU counters.",
+        .desc = {"More options for adjusting how the CPU counters."},
     },
     {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabValues_Shield) / 4,
         .val = 1,
         .name = "Infinite Shields",
-        .desc = "Adjust how shield health deteriorates.",
+        .desc = {"Adjust how shield health deteriorates."},
         .values = LabValues_Shield,
     },
     {
@@ -2022,22 +1964,21 @@ static EventOption LabOptions_CPU[OPTCPU_COUNT] = {
         .val = 60,
         .value_num = 61,
         .name = "Infinite Shields Health",
-        .values = "%i",
-        .desc = "Adjust the max shield health when using\ninfinite shields.",
+        .format = "%i",
+        .desc = {"Adjust the max shield health when using",
+                 "infinite shields."},
     },
     {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabValues_ShieldDir) / 4,
         .name = "Shield Angle",
-        .desc = "Adjust how CPU angles their shield.",
+        .desc = {"Adjust how CPU angles their shield."},
         .values = LabValues_ShieldDir,
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = 2,
+        .kind = OPTKIND_TOGGLE,
         .name = "Intangibility",
-        .desc = "Toggle the CPU's ability to take damage.",
-        .values = LabOptions_OffOn,
+        .desc = {"Toggle the CPU's ability to take damage."},
         .OnChange = Lab_ChangeCPUIntang,
     },
     {
@@ -2045,7 +1986,8 @@ static EventOption LabOptions_CPU[OPTCPU_COUNT] = {
         .value_num = sizeof(LabValues_GrabEscape) / 4,
         .val = CPUMASH_NONE,
         .name = "Grab Escape",
-        .desc = "Adjust how the CPU will attempt to escape\ngrabs.",
+        .desc = {"Adjust how the CPU will attempt to escape",
+                 "grabs."},
         .values = LabValues_GrabEscape,
     },
     {
@@ -2053,7 +1995,7 @@ static EventOption LabOptions_CPU[OPTCPU_COUNT] = {
         .value_num = sizeof(LabValues_GrabRelease) / 4,
         .val = CPUGRABRELEASE_GROUNDED,
         .name = "Grab Release",
-        .desc = "Adjust how the CPU will escape grabs.",
+        .desc = {"Adjust how the CPU will escape grabs."},
         .values = LabValues_GrabRelease,
     },
 
@@ -2065,13 +2007,13 @@ static EventOption LabOptions_CPU[OPTCPU_COUNT] = {
         .value_num = sizeof(LabValues_CPUControlledBy) / 4,
         .val = 0,
         .name = "Controlled By",
-        .desc = "Select another port to control the CPU.",
+        .desc = {"Select another port to control the CPU."},
         .values = LabValues_CPUControlledBy,
     },
     {
         .kind = OPTKIND_FUNC,
         .name = "Freeze CPU",
-        .desc = "Freeze the CPU and their hitboxes.",
+        .desc = {"Freeze the CPU and their hitboxes."},
         .OnSelect = Lab_FreezeCPU,
     }
 };
@@ -2079,8 +2021,7 @@ static EventOption LabOptions_CPU[OPTCPU_COUNT] = {
 static EventMenu LabMenu_CPU = {
     .name = "CPU Options",
     .option_num = sizeof(LabOptions_CPU) / sizeof(EventOption),
-    .options = &LabOptions_CPU,
-    .shortcuts = &Lab_ShortcutList,
+    .options = LabOptions_CPU,
 };
 
 // ADVANCED COUNTER OPTIONS -------------------------------------------------
@@ -2115,7 +2056,7 @@ typedef struct CounterInfo {
 } CounterInfo;
 CounterInfo GetCounterInfo(void);
 
-static char *LabValues_CounterLogic[] = {"Default", "Disable", "Custom"};
+static const char *LabValues_CounterLogic[] = {"Default", "Disable", "Custom"};
 
 #define ADV_COUNTER_COUNT 10
 #define ADV_COUNTER_SAVED_COUNT (OPTCTR_COUNT - OPTCTR_HITNUM - 1) 
@@ -2129,15 +2070,17 @@ static EventOption LabOptions_AdvCounter_Default[OPTCTR_COUNT] = {
         .val = 1,
         .value_min = 1,
         .value_num = ADV_COUNTER_COUNT,
-        .values = "%d",
-        .desc = "Which hit number to alter.",
+        .format = "%d",
+        .desc = {"Which hit number to alter."},
         .OnChange = Lab_ChangeAdvCounterHitNumber,
     },
     {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabValues_CounterLogic) / 4,
         .name = "Counter Logic",
-        .desc = "How to alter the counter option.\nDefault = use basic counter options.\nDisable = no counter. Custom = custom behavior.",
+        .desc = {"How to alter the counter option.",
+                 "Default = use basic counter options.",
+                 "Disable = no counter. Custom = custom behavior."},
         .values = LabValues_CounterLogic,
         .OnChange = Lab_ChangeAdvCounterLogic,
     },
@@ -2147,7 +2090,8 @@ static EventOption LabOptions_AdvCounter_Default[OPTCTR_COUNT] = {
         .value_num = sizeof(LabValues_CounterGround) / 4,
         .val = 1,
         .name = "Counter Action (Ground)",
-        .desc = "Select the action to be performed after a\ngrounded CPU's hitstun ends.",
+        .desc = {"Select the action to be performed after a",
+                 "grounded CPU's hitstun ends."},
         .values = LabValues_CounterGround,
         .disable = 1,
     },
@@ -2156,7 +2100,8 @@ static EventOption LabOptions_AdvCounter_Default[OPTCTR_COUNT] = {
         .value_num = sizeof(LabValues_CounterAir) / 4,
         .val = 4,
         .name = "Counter Action (Air)",
-        .desc = "Select the action to be performed after an\nairborne CPU's hitstun ends.",
+        .desc = {"Select the action to be performed after an",
+                 "airborne CPU's hitstun ends."},
         .values = LabValues_CounterAir,
         .disable = 1,
     },
@@ -2165,7 +2110,8 @@ static EventOption LabOptions_AdvCounter_Default[OPTCTR_COUNT] = {
         .value_num = sizeof(LabValues_CounterShield) / 4,
         .val = 1,
         .name = "Counter Action (Shield)",
-        .desc = "Select the action to be performed after the\nCPU's shield is hit.",
+        .desc = {"Select the action to be performed after the",
+                 "CPU's shield is hit."},
         .values = LabValues_CounterShield,
         .disable = 1,
     },
@@ -2174,24 +2120,27 @@ static EventOption LabOptions_AdvCounter_Default[OPTCTR_COUNT] = {
         .kind = OPTKIND_INT,
         .value_num = 100,
         .name = "Delay (Ground)",
-        .desc = "Adjust the amount of actionable frames before \nthe CPU counters on the ground.",
-        .values = "%d Frames",
+        .desc = {"Adjust the amount of actionable frames before ",
+                 "the CPU counters on the ground."},
+        .format = "%d Frames",
         .disable = 1,
     },
     {
         .kind = OPTKIND_INT,
         .value_num = 100,
         .name = "Delay (Air)",
-        .desc = "Adjust the amount of actionable frames before \nthe CPU counters in the air.",
-        .values = "%d Frames",
+        .desc = {"Adjust the amount of actionable frames before ",
+                 "the CPU counters in the air."},
+        .format = "%d Frames",
         .disable = 1,
     },
     {
         .kind = OPTKIND_INT,
         .value_num = 100,
         .name = "Delay (Shield)",
-        .desc = "Adjust the amount of actionable frames before \nthe CPU counters in shield.",
-        .values = "%d Frames",
+        .desc = {"Adjust the amount of actionable frames before ",
+                 "the CPU counters in shield."},
+        .format = "%d Frames",
         .disable = 1,
     },
 };
@@ -2200,7 +2149,6 @@ static EventMenu LabMenu_AdvCounter = {
     .name = "Advanced Counter Options",
     .option_num = sizeof(LabOptions_AdvCounter_Default) / sizeof(EventOption),
     .options = LabOptions_AdvCounter[0],
-    .shortcuts = &Lab_ShortcutList,
 };
 
 // TECH MENU --------------------------------------------------------------
@@ -2216,8 +2164,8 @@ enum tech_lockout {
     TECHLOCKOUT_LATEST,
 };
 
-static char *LabOptions_TechTrap[] = {"Off", "Earliest Tech Input", "Latest Tech Input"};
-static char *LabOptions_TechLockout[] = {"Earliest Tech Input", "Latest Tech Input"};
+static const char *LabOptions_TechTrap[] = {"Off", "Earliest Tech Input", "Latest Tech Input"};
+static const char *LabOptions_TechLockout[] = {"Earliest Tech Input", "Latest Tech Input"};
 
 static int tech_frame_distinguishable[27] = {
      8, // Mario
@@ -2277,7 +2225,8 @@ static EventOption LabOptions_Tech[OPTTECH_COUNT] = {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabValues_Tech) / 4,
         .name = "Tech Option",
-        .desc = "Adjust what the CPU will do upon colliding\nwith the stage.",
+        .desc = {"Adjust what the CPU will do upon colliding",
+                 "with the stage."},
         .values = LabValues_Tech,
         .OnChange = Lab_ChangeTech,
     },
@@ -2285,43 +2234,44 @@ static EventOption LabOptions_Tech[OPTTECH_COUNT] = {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabValues_Getup) / 4,
         .name = "Get Up Option",
-        .desc = "Adjust what the CPU will do after missing\na tech input.",
+        .desc = {"Adjust what the CPU will do after missing",
+                 "a tech input."},
         .values = LabValues_Getup,
         .OnChange = Lab_ChangeGetup,
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = 2,
+        .kind = OPTKIND_TOGGLE,
         .name = "Tech Invisibility",
-        .desc = "Toggle the CPU turning invisible during tech\nanimations.",
-        .values = LabOptions_OffOn,
+        .desc = {"Toggle the CPU turning invisible during tech","animations."},
     },
     {
         .kind = OPTKIND_INT,
         .value_num = 16,
         .name = "Tech Invisibility Delay",
-        .values = "%d Frames",
-        .desc = "Set the delay in frames on tech invisibility.",
+        .format = "%d Frames",
+        .desc = {"Set the delay in frames on tech invisibility."},
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = 2,
+        .kind = OPTKIND_TOGGLE,
         .name = "Tech Sound",
-        .desc = "Toggle playing a sound when tech is\ndistinguishable.",
-        .values = LabOptions_OffOn,
+        .desc = {"Toggle playing a sound when tech is",
+                 "distinguishable."},
     },
     {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabOptions_TechTrap)/sizeof(*LabOptions_TechTrap),
         .name = "Simulate Tech Trap",
-        .desc = "Set a window where the CPU cannot tech\nafter being hit out of tumble.",
+        .desc = {"Set a window where the CPU cannot tech",
+                 "after being hit out of tumble."},
         .values = LabOptions_TechTrap,
     },
     {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabOptions_TechLockout)/sizeof(*LabOptions_TechLockout),
         .name = "Tech Lockout",
-        .desc = "Prevent the CPU from teching in succession.\nEarliest - as little lockout as possible\nLatest - as much lockout as possible.",
+        .desc = {"Prevent the CPU from teching in succession.",
+                 "Earliest - as little lockout as possible",
+                 "Latest - as much lockout as possible."},
         .values = LabOptions_TechLockout,
     },
     {
@@ -2329,8 +2279,8 @@ static EventOption LabOptions_Tech[OPTTECH_COUNT] = {
         .value_num = 101,
         .val = 25,
         .name = "Tech in Place Chance",
-        .desc = "Adjust the chance the CPU will tech in place.",
-        .values = "%d%%",
+        .desc = {"Adjust the chance the CPU will tech in place."},
+        .format = "%d%%",
         .OnChange = Lab_ChangeTechInPlaceChance,
     },
     {
@@ -2338,8 +2288,8 @@ static EventOption LabOptions_Tech[OPTTECH_COUNT] = {
         .value_num = 101,
         .val = 25,
         .name = "Tech Away Chance",
-        .desc = "Adjust the chance the CPU will tech away.",
-        .values = "%d%%",
+        .desc = {"Adjust the chance the CPU will tech away."},
+        .format = "%d%%",
         .OnChange = Lab_ChangeTechAwayChance,
     },
     {
@@ -2347,8 +2297,8 @@ static EventOption LabOptions_Tech[OPTTECH_COUNT] = {
         .value_num = 101,
         .val = 25,
         .name = "Tech Toward Chance",
-        .desc = "Adjust the chance the CPU will tech toward.",
-        .values = "%d%%",
+        .desc = {"Adjust the chance the CPU will tech toward."},
+        .format = "%d%%",
         .OnChange = Lab_ChangeTechTowardChance,
     },
     {
@@ -2356,8 +2306,8 @@ static EventOption LabOptions_Tech[OPTTECH_COUNT] = {
         .value_num = 101,
         .val = 25,
         .name = "Miss Tech Chance",
-        .desc = "Adjust the chance the CPU will miss tech.",
-        .values = "%d%%",
+        .desc = {"Adjust the chance the CPU will miss tech."},
+        .format = "%d%%",
         .OnChange = Lab_ChangeMissTechChance,
     },
     {
@@ -2365,16 +2315,17 @@ static EventOption LabOptions_Tech[OPTTECH_COUNT] = {
         .value_num = 101,
         .val = 0,
         .name = "Miss Tech Wait Chance",
-        .desc = "Adjust the chance the CPU will wait 15 frames\nafter a missed tech.",
-        .values = "%d%%",
+        .desc = {"Adjust the chance the CPU will wait 15 frames",
+                 "after a missed tech."},
+        .format = "%d%%",
     },
     {
         .kind = OPTKIND_INT,
         .value_num = 101,
         .val = 25,
         .name = "Stand Chance",
-        .desc = "Adjust the chance the CPU will stand.",
-        .values = "%d%%",
+        .desc = {"Adjust the chance the CPU will stand."},
+        .format = "%d%%",
         .OnChange = Lab_ChangeStandChance,
     },
     {
@@ -2382,8 +2333,8 @@ static EventOption LabOptions_Tech[OPTTECH_COUNT] = {
         .value_num = 101,
         .val = 25,
         .name = "Roll Away Chance",
-        .desc = "Adjust the chance the CPU will roll away.",
-        .values = "%d%%",
+        .desc = {"Adjust the chance the CPU will roll away."},
+        .format = "%d%%",
         .OnChange = Lab_ChangeRollAwayChance,
     },
     {
@@ -2391,8 +2342,8 @@ static EventOption LabOptions_Tech[OPTTECH_COUNT] = {
         .value_num = 101,
         .val = 25,
         .name = "Roll Toward Chance",
-        .desc = "Adjust the chance the CPU will roll toward.",
-        .values = "%d%%",
+        .desc = {"Adjust the chance the CPU will roll toward."},
+        .format = "%d%%",
         .OnChange = Lab_ChangeRollTowardChance,
     },
     {
@@ -2400,8 +2351,8 @@ static EventOption LabOptions_Tech[OPTTECH_COUNT] = {
         .value_num = 101,
         .val = 25,
         .name = "Getup Attack Chance",
-        .desc = "Adjust the chance the CPU will getup attack.",
-        .values = "%d%%",
+        .desc = {"Adjust the chance the CPU will getup attack."},
+        .format = "%d%%",
         .OnChange = Lab_ChangeGetupAttackChance,
     },
 };
@@ -2409,8 +2360,7 @@ static EventOption LabOptions_Tech[OPTTECH_COUNT] = {
 static EventMenu LabMenu_Tech = {
     .name = "Tech Options",
     .option_num = sizeof(LabOptions_Tech) / sizeof(EventOption),
-    .options = &LabOptions_Tech,
-    .shortcuts = &Lab_ShortcutList,
+    .options = LabOptions_Tech,
 };
 
 // PLAYBACK CHANCES MENU -----------------------------------------------------
@@ -2431,8 +2381,8 @@ static EventOption LabOptions_SlotChancesHMN[OPTSLOTCHANCE_COUNT] = {
     {
         .kind = OPTKIND_INT,
         .name = "Slot 1",
-        .desc = "Chance of slot 1 occuring.",
-        .values = "%d%%",
+        .desc = {"Chance of slot 1 occuring."},
+        .format = "%d%%",
         .value_num = 101,
         .disable = 1,
         .OnChange = Lab_ChangeSlot1ChanceHMN,
@@ -2440,8 +2390,8 @@ static EventOption LabOptions_SlotChancesHMN[OPTSLOTCHANCE_COUNT] = {
     {
         .kind = OPTKIND_INT,
         .name = "Slot 2",
-        .desc = "Chance of slot 2 occuring.",
-        .values = "%d%%",
+        .desc = {"Chance of slot 2 occuring."},
+        .format = "%d%%",
         .value_num = 101,
         .disable = 1,
         .OnChange = Lab_ChangeSlot2ChanceHMN,
@@ -2449,8 +2399,8 @@ static EventOption LabOptions_SlotChancesHMN[OPTSLOTCHANCE_COUNT] = {
     {
         .kind = OPTKIND_INT,
         .name = "Slot 3",
-        .desc = "Chance of slot 3 occuring.",
-        .values = "%d%%",
+        .desc = {"Chance of slot 3 occuring."},
+        .format = "%d%%",
         .value_num = 101,
         .disable = 1,
         .OnChange = Lab_ChangeSlot3ChanceHMN,
@@ -2458,8 +2408,8 @@ static EventOption LabOptions_SlotChancesHMN[OPTSLOTCHANCE_COUNT] = {
     {
         .kind = OPTKIND_INT,
         .name = "Slot 4",
-        .desc = "Chance of slot 4 occuring.",
-        .values = "%d%%",
+        .desc = {"Chance of slot 4 occuring."},
+        .format = "%d%%",
         .value_num = 101,
         .disable = 1,
         .OnChange = Lab_ChangeSlot4ChanceHMN,
@@ -2467,8 +2417,8 @@ static EventOption LabOptions_SlotChancesHMN[OPTSLOTCHANCE_COUNT] = {
     {
         .kind = OPTKIND_INT,
         .name = "Slot 5",
-        .desc = "Chance of slot 5 occuring.",
-        .values = "%d%%",
+        .desc = {"Chance of slot 5 occuring."},
+        .format = "%d%%",
         .value_num = 101,
         .disable = 1,
         .OnChange = Lab_ChangeSlot5ChanceHMN,
@@ -2476,8 +2426,8 @@ static EventOption LabOptions_SlotChancesHMN[OPTSLOTCHANCE_COUNT] = {
     {
         .kind = OPTKIND_INT,
         .name = "Slot 6",
-        .desc = "Chance of slot 6 occuring.",
-        .values = "%d%%",
+        .desc = {"Chance of slot 6 occuring."},
+        .format = "%d%%",
         .value_num = 101,
         .disable = 1,
         .OnChange = Lab_ChangeSlot6ChanceHMN,
@@ -2485,8 +2435,9 @@ static EventOption LabOptions_SlotChancesHMN[OPTSLOTCHANCE_COUNT] = {
     {
         .kind = OPTKIND_INT,
         .name = "Random Percent",
-        .desc = "A random percentage up to this value will be\nadded to the character's percentage each load.",
-        .values = "%d%%",
+        .desc = {"A random percentage up to this value will be",
+                 "added to the character's percentage each load."},
+        .format = "%d%%",
         .value_num = 201,
     },
 };
@@ -2495,8 +2446,8 @@ static EventOption LabOptions_SlotChancesCPU[OPTSLOTCHANCE_COUNT] = {
     {
         .kind = OPTKIND_INT,
         .name = "Slot 1",
-        .desc = "Chance of slot 1 occuring.",
-        .values = "%d%%",
+        .desc = {"Chance of slot 1 occuring."},
+        .format = "%d%%",
         .value_num = 101,
         .disable = 1,
         .OnChange = Lab_ChangeSlot1ChanceCPU,
@@ -2504,8 +2455,8 @@ static EventOption LabOptions_SlotChancesCPU[OPTSLOTCHANCE_COUNT] = {
     {
         .kind = OPTKIND_INT,
         .name = "Slot 2",
-        .desc = "Chance of slot 2 occuring.",
-        .values = "%d%%",
+        .desc = {"Chance of slot 2 occuring."},
+        .format = "%d%%",
         .value_num = 101,
         .disable = 1,
         .OnChange = Lab_ChangeSlot2ChanceCPU,
@@ -2513,8 +2464,8 @@ static EventOption LabOptions_SlotChancesCPU[OPTSLOTCHANCE_COUNT] = {
     {
         .kind = OPTKIND_INT,
         .name = "Slot 3",
-        .desc = "Chance of slot 3 occuring.",
-        .values = "%d%%",
+        .desc = {"Chance of slot 3 occuring."},
+        .format = "%d%%",
         .value_num = 101,
         .disable = 1,
         .OnChange = Lab_ChangeSlot3ChanceCPU,
@@ -2522,8 +2473,8 @@ static EventOption LabOptions_SlotChancesCPU[OPTSLOTCHANCE_COUNT] = {
     {
         .kind = OPTKIND_INT,
         .name = "Slot 4",
-        .desc = "Chance of slot 4 occuring.",
-        .values = "%d%%",
+        .desc = {"Chance of slot 4 occuring."},
+        .format = "%d%%",
         .value_num = 101,
         .disable = 1,
         .OnChange = Lab_ChangeSlot4ChanceCPU,
@@ -2531,8 +2482,8 @@ static EventOption LabOptions_SlotChancesCPU[OPTSLOTCHANCE_COUNT] = {
     {
         .kind = OPTKIND_INT,
         .name = "Slot 5",
-        .desc = "Chance of slot 5 occuring.",
-        .values = "%d%%",
+        .desc = {"Chance of slot 5 occuring."},
+        .format = "%d%%",
         .value_num = 101,
         .disable = 1,
         .OnChange = Lab_ChangeSlot5ChanceCPU,
@@ -2540,8 +2491,8 @@ static EventOption LabOptions_SlotChancesCPU[OPTSLOTCHANCE_COUNT] = {
     {
         .kind = OPTKIND_INT,
         .name = "Slot 6",
-        .desc = "Chance of slot 6 occuring.",
-        .values = "%d%%",
+        .desc = {"Chance of slot 6 occuring."},
+        .format = "%d%%",
         .value_num = 101,
         .disable = 1,
         .OnChange = Lab_ChangeSlot6ChanceCPU,
@@ -2549,8 +2500,9 @@ static EventOption LabOptions_SlotChancesCPU[OPTSLOTCHANCE_COUNT] = {
     {
         .kind = OPTKIND_INT,
         .name = "Random Percent",
-        .desc = "A random percentage up to this value will be\nadded to the character's percentage each load.",
-        .values = "%d%%",
+        .desc = {"A random percentage up to this value will be",
+                 "added to the character's percentage each load."},
+        .format = "%d%%",
         .value_num = 201,
     },
 };
@@ -2558,15 +2510,13 @@ static EventOption LabOptions_SlotChancesCPU[OPTSLOTCHANCE_COUNT] = {
 static EventMenu LabMenu_SlotChancesHMN = {
     .name = "HMN Playback Slot Chances",
     .option_num = sizeof(LabOptions_SlotChancesHMN) / sizeof(EventOption),
-    .options = &LabOptions_SlotChancesHMN,
-    .shortcuts = &Lab_ShortcutList,
+    .options = LabOptions_SlotChancesHMN,
 };
 
 static EventMenu LabMenu_SlotChancesCPU = {
     .name = "CPU Playback Slot Chances",
     .option_num = sizeof(LabOptions_SlotChancesCPU) / sizeof(EventOption),
-    .options = &LabOptions_SlotChancesCPU,
-    .shortcuts = &Lab_ShortcutList,
+    .options = LabOptions_SlotChancesCPU,
 };
 
 // RECORDING MENU --------------------------------------------------------------
@@ -2650,24 +2600,26 @@ enum rec_takeover_target
 
 // Aitch: Please be aware that the order of these options is important.
 // The option idx will be serialized when exported, so loading older replays could load the wrong option if we reorder/remove options.
-static char *LabValues_RecordSlot[] = {"Random", "Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5", "Slot 6"};
-static char *LabValues_HMNRecordMode[] = {"Off", "Record", "Playback", "Re-Record"};
-static char *LabValues_CPURecordMode[] = {"Off", "Control", "Record", "Playback", "Re-Record"};
-static char *LabValues_AutoRestore[] = {"Off", "Playback Ends", "CPU Counters"};
-static char *LabValues_PlaybackCounterActions[] = {"Off", "After Playback Ends", "On CPU Hit", "On HMN Hit", "On Any Hit"};
-static char *LabOptions_ChangeMirroredPlayback[] = {"Off", "On", "Random"};
+static const char *LabValues_RecordSlot[] = {"Random", "Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5", "Slot 6"};
+static const char *LabValues_HMNRecordMode[] = {"Off", "Record", "Playback", "Re-Record"};
+static const char *LabValues_CPURecordMode[] = {"Off", "Control", "Record", "Playback", "Re-Record"};
+static const char *LabValues_AutoRestore[] = {"Off", "Playback Ends", "CPU Counters"};
+static const char *LabValues_PlaybackCounterActions[] = {"Off", "After Playback Ends", "On CPU Hit", "On HMN Hit", "On Any Hit"};
+static const char *LabOptions_ChangeMirroredPlayback[] = {"Off", "On", "Random"};
 
 static const EventOption Record_Save = {
     .kind = OPTKIND_FUNC,
     .name = "Save Positions",
-    .desc = "Save the current fighter positions\nas the initial positions.",
+    .desc = {"Save the current fighter positions",
+             "as the initial positions."},
     .OnSelect = Record_InitState,
 };
 
 static const EventOption Record_Load = {
     .kind = OPTKIND_FUNC,
     .name = "Restore Positions",
-    .desc = "Load the saved fighter positions and \nstart the sequence from the beginning.",
+    .desc = {"Load the saved fighter positions and ",
+             "start the sequence from the beginning."},
     .OnSelect = Record_RestoreState,
 };
 
@@ -2681,7 +2633,8 @@ static EventOption LabOptions_Record[OPTREC_COUNT] = {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabValues_HMNRecordMode) / 4,
         .name = "HMN Mode",
-        .desc = "Toggle between recording and playback of\ninputs.",
+        .desc = {"Toggle between recording and playback of",
+                 "inputs."},
         .values = LabValues_HMNRecordMode,
         .OnChange = Record_ChangeHMNMode,
     },
@@ -2690,7 +2643,9 @@ static EventOption LabOptions_Record[OPTREC_COUNT] = {
         .value_num = sizeof(LabValues_RecordSlot) / 4,
         .val = 1,
         .name = "HMN Record Slot",
-        .desc = "Toggle which recording slot to save inputs \nto. Maximum of 6 and can be set to random \nduring playback.",
+        .desc = {"Toggle which recording slot to save inputs ",
+                 "to. Maximum of 6 and can be set to random ",
+                 "during playback."},
         .values = LabValues_RecordSlot,
         .OnChange = Record_ChangeHMNSlot,
     },
@@ -2698,7 +2653,8 @@ static EventOption LabOptions_Record[OPTREC_COUNT] = {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabValues_CPURecordMode) / 4,
         .name = "CPU Mode",
-        .desc = "Toggle between recording and playback of\ninputs.",
+        .desc = {"Toggle between recording and playback of",
+                 "inputs."},
         .values = LabValues_CPURecordMode,
         .OnChange = Record_ChangeCPUMode,
     },
@@ -2707,7 +2663,8 @@ static EventOption LabOptions_Record[OPTREC_COUNT] = {
         .value_num = sizeof(LabValues_RecordSlot) / 4,
         .val = 1,
         .name = "CPU Record Slot",
-        .desc = "Toggle which recording slot to save inputs \nto. Maximum of 6 and can be set to random \nduring playback.",
+        .desc = {"Toggle which recording slot to save inputs ",
+                 "to. Maximum of 6 and can be set to random ","during playback."},
         .values = LabValues_RecordSlot,
         .OnChange = Record_ChangeCPUSlot,
     },
@@ -2715,7 +2672,10 @@ static EventOption LabOptions_Record[OPTREC_COUNT] = {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabOptions_ChangeMirroredPlayback) / 4,
         .name = "Mirrored Playback",
-        .desc = "Playback with mirrored the recorded inputs,\npositions and facing directions.\n(!) This works properly only on symmetrical \nstages.",
+        .desc = {"Playback with mirrored the recorded inputs,",
+                 "positions and facing directions.",
+                 "(!) This works properly only on symmetrical ",
+                 "stages."},
         .values = LabOptions_ChangeMirroredPlayback,
         .OnChange = Record_ChangeMirroredPlayback,
     },
@@ -2724,77 +2684,80 @@ static EventOption LabOptions_Record[OPTREC_COUNT] = {
         .value_num = sizeof(LabValues_PlaybackCounterActions) / 4,
         .name = "CPU Counter",
         .val = 1,
-        .desc = "Choose when CPU will start performing\ncounter actions during playback.",
+        .desc = {"Choose when CPU will start performing",
+                 "counter actions during playback."},
         .values = LabValues_PlaybackCounterActions,
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = sizeof(LabOptions_OffOn) / 4,
+        .kind = OPTKIND_TOGGLE,
         .name = "Loop Input Playback",
-        .desc = "Loop the recorded inputs when they end.",
-        .values = LabOptions_OffOn,
+        .desc = {"Loop the recorded inputs when they end."},
     },
     {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabValues_AutoRestore) / 4,
         .name = "Auto Restore",
-        .desc = "Automatically restore saved positions.",
+        .desc = {"Automatically restore saved positions."},
         .values = LabValues_AutoRestore,
     },
     {
-        .kind = OPTKIND_STRING,
-        .value_num = sizeof(LabOptions_OffOn) / 4,
+        .kind = OPTKIND_TOGGLE,
         .name = "Start Paused",
-        .desc = "Pause the replay until your first input.",
-        .values = LabOptions_OffOn,
+        .desc = {"Pause the replay until your first input."},
     },
     {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabOptions_TakeoverTarget) / 4,
         .name = "Playback Takeover",
-        .desc = "Which character to takeover when\ninputting during playback.",
+        .desc = {"Which character to takeover when",
+                 "inputting during playback."},
         .values = LabOptions_TakeoverTarget,
     },
     {
         .kind = OPTKIND_FUNC,
         .name = "Re-Save Positions",
-        .desc = "Save the current position, keeping\nall recorded inputs.",
+        .desc = {"Save the current position, keeping",
+                 "all recorded inputs."},
         .OnSelect = Record_ResaveState,
     },
     {
         .kind = OPTKIND_FUNC,
         .name = "Prune Positions",
-        .desc = "Save the current position, keeping\nrecorded inputs from this point onwards.",
+        .desc = {"Save the current position, keeping",
+                 "recorded inputs from this point onwards."},
         .OnSelect = Record_PruneState,
     },
     {
         .kind = OPTKIND_FUNC,
         .name = "Delete Positions",
-        .desc = "Delete the current initial position\nand recordings.",
+        .desc = {"Delete the current initial position",
+                 "and recordings."},
         .OnSelect = Record_DeleteState,
     },
     {
         .kind = OPTKIND_MENU,
         .name = "Slot Management",
-        .desc = "Miscellaneous settings for altering the\npositions and inputs.",
+        .desc = {"Miscellaneous settings for altering the",
+                 "positions and inputs."},
         .menu = &LabMenu_SlotManagement,
     },
     {
         .kind = OPTKIND_MENU,
         .name = "Set HMN Chances",
-        .desc = "Set various randomization settings for the HMN.",
+        .desc = {"Set various randomization settings for the HMN."},
         .menu = &LabMenu_SlotChancesHMN,
     },
     {
         .kind = OPTKIND_MENU,
         .name = "Set CPU Chances",
-        .desc = "Set various randomization settings for the CPU.",
+        .desc = {"Set various randomization settings for the CPU."},
         .menu = &LabMenu_SlotChancesCPU,
     },
     {
         .kind = OPTKIND_FUNC,
         .name = "Export",
-        .desc = "Export the recording to a memory card\nfor later use or to share with others.",
+        .desc = {"Export the recording to a memory card",
+                 "for later use or to share with others."},
         .OnSelect = Export_Init,
     },
 };
@@ -2802,8 +2765,7 @@ static EventOption LabOptions_Record[OPTREC_COUNT] = {
 static EventMenu LabMenu_Record = {
     .name = "Recording",
     .option_num = sizeof(LabOptions_Record) / sizeof(EventOption),
-    .options = &LabOptions_Record,
-    .shortcuts = &Lab_ShortcutList,
+    .options = LabOptions_Record,
 };
 
 // SLOT MANAGEMENT MENU --------------------------------------------------------------
@@ -2832,39 +2794,40 @@ static EventOption LabOptions_SlotManagement[OPTSLOT_COUNT] = {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabOptions_HmnCpu) / 4,
         .name = "Player",
-        .desc = "Select the player to manage.",
+        .desc = {"Select the player to manage."},
         .values = LabOptions_HmnCpu,
     },
     {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabOptions_Slot) / 4,
         .name = "Slot",
-        .desc = "Select the slot to manage.",
+        .desc = {"Select the slot to manage."},
         .values = LabOptions_Slot,
     },
     {
         .kind = OPTKIND_MENU,
         .name = "Modify Inputs",
-        .desc = "Manually alter this slot's inputs.",
+        .desc = {"Manually alter this slot's inputs."},
         .menu = &LabMenu_AlterInputs,
     },
     {
         .kind = OPTKIND_FUNC,
         .name = "Delete Slot",
-        .desc = "Remove the inputs from this slot.",
+        .desc = {"Remove the inputs from this slot."},
         .OnSelect = Record_DeleteSlot,
     },
     {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LabOptions_Slot) / 4,
         .name = "Copy Slot To",
-        .desc = "Select the slot to copy to.",
+        .desc = {"Select the slot to copy to."},
         .values = LabOptions_Slot,
     },
     {
         .kind = OPTKIND_FUNC,
         .name = "Copy Slot",
-        .desc = "Copy the inputs from \"Slot\"\nto \"Copy Slot To\".",
+        .desc = {"Copy the inputs from \"Slot\"",
+                 "to \"Copy Slot To\"."},
         .OnSelect = Record_CopySlot,
     },
 };
@@ -2872,8 +2835,7 @@ static EventOption LabOptions_SlotManagement[OPTSLOT_COUNT] = {
 static EventMenu LabMenu_SlotManagement = {
     .name = "Slot Management",
     .option_num = sizeof(LabOptions_SlotManagement) / sizeof(EventOption),
-    .options = &LabOptions_SlotManagement,
-    .shortcuts = &Lab_ShortcutList,
+    .options = LabOptions_SlotManagement,
 };
 
 // ALTER INPUTS MENU ---------------------------------------------------------
@@ -2904,8 +2866,8 @@ static EventOption LabOptions_AlterInputs[OPTINPUT_COUNT] = {
         .val = 1,
         .value_num = 3600,
         .name = "Frame",
-        .desc = "Which frame's inputs to alter.",
-        .values = "%d",
+        .desc = {"Which frame's inputs to alter."},
+        .format = "%d",
         .OnChange = Lab_ChangeAlterInputsFrame,
     },
     {
@@ -2913,8 +2875,7 @@ static EventOption LabOptions_AlterInputs[OPTINPUT_COUNT] = {
         .value_min = -80,
         .value_num = 161,
         .name = "Stick X",
-        .desc = "",
-        .values = "%d",
+        .format = "%d",
         .OnChange = Lab_ChangeInputs,
     },
     {
@@ -2922,8 +2883,7 @@ static EventOption LabOptions_AlterInputs[OPTINPUT_COUNT] = {
         .value_min = -80,
         .value_num = 161,
         .name = "Stick Y",
-        .desc = "",
-        .values = "%d",
+        .format = "%d",
         .OnChange = Lab_ChangeInputs,
     },
     {
@@ -2931,8 +2891,7 @@ static EventOption LabOptions_AlterInputs[OPTINPUT_COUNT] = {
         .value_min = -80,
         .value_num = 161,
         .name = "C-Stick X",
-        .desc = "",
-        .values = "%d",
+        .format = "%d",
         .OnChange = Lab_ChangeInputs,
     },
     {
@@ -2940,8 +2899,7 @@ static EventOption LabOptions_AlterInputs[OPTINPUT_COUNT] = {
         .value_min = -80,
         .value_num = 161,
         .name = "C-Stick Y",
-        .desc = "",
-        .values = "%d",
+        .format = "%d",
         .OnChange = Lab_ChangeInputs,
     },
     {
@@ -2949,15 +2907,13 @@ static EventOption LabOptions_AlterInputs[OPTINPUT_COUNT] = {
         .value_min = 0,
         .value_num = 141,
         .name = "Analog Trigger",
-        .desc = "",
-        .values = "%d",
+        .format = "%d",
         .OnChange = Lab_ChangeInputs,
     },
     {
         .kind = OPTKIND_STRING,
         .name = "A",
         .value_num = 2,
-        .desc = "",
         .values = LabOptions_CheckBox,
         .OnChange = Lab_ChangeInputs,
     },
@@ -2965,7 +2921,6 @@ static EventOption LabOptions_AlterInputs[OPTINPUT_COUNT] = {
         .kind = OPTKIND_STRING,
         .name = "B",
         .value_num = 2,
-        .desc = "",
         .values = LabOptions_CheckBox,
         .OnChange = Lab_ChangeInputs,
     },
@@ -2973,7 +2928,6 @@ static EventOption LabOptions_AlterInputs[OPTINPUT_COUNT] = {
         .kind = OPTKIND_STRING,
         .name = "X",
         .value_num = 2,
-        .desc = "",
         .values = LabOptions_CheckBox,
         .OnChange = Lab_ChangeInputs,
     },
@@ -2981,7 +2935,6 @@ static EventOption LabOptions_AlterInputs[OPTINPUT_COUNT] = {
         .kind = OPTKIND_STRING,
         .name = "Y",
         .value_num = 2,
-        .desc = "",
         .values = LabOptions_CheckBox,
         .OnChange = Lab_ChangeInputs,
     },
@@ -2989,7 +2942,6 @@ static EventOption LabOptions_AlterInputs[OPTINPUT_COUNT] = {
         .kind = OPTKIND_STRING,
         .name = "Z",
         .value_num = 2,
-        .desc = "",
         .values = LabOptions_CheckBox,
         .OnChange = Lab_ChangeInputs,
     },
@@ -2997,7 +2949,6 @@ static EventOption LabOptions_AlterInputs[OPTINPUT_COUNT] = {
         .kind = OPTKIND_STRING,
         .name = "L",
         .value_num = 2,
-        .desc = "",
         .values = LabOptions_CheckBox,
         .OnChange = Lab_ChangeInputs,
     },
@@ -3005,7 +2956,6 @@ static EventOption LabOptions_AlterInputs[OPTINPUT_COUNT] = {
         .kind = OPTKIND_STRING,
         .name = "R",
         .value_num = 2,
-        .desc = "",
         .values = LabOptions_CheckBox,
         .OnChange = Lab_ChangeInputs,
     },
@@ -3014,15 +2964,13 @@ static EventOption LabOptions_AlterInputs[OPTINPUT_COUNT] = {
 static EventMenu LabMenu_AlterInputs = {
     .name = "Alter Inputs",
     .option_num = sizeof(LabOptions_AlterInputs) / sizeof(EventOption),
-    .options = &LabOptions_AlterInputs,
-    .shortcuts = &Lab_ShortcutList,
-    .menu_think = Lab_SetAlterInputsMenuOptions,
+    .options = LabOptions_AlterInputs,
 };
 
 // OVERLAY MENU --------------------------------------------------------------
 
 #define OVERLAY_COLOUR_COUNT 11
-static char *LabValues_OverlayNames[OVERLAY_COLOUR_COUNT] = { 
+static const char *LabValues_OverlayNames[OVERLAY_COLOUR_COUNT] = { 
     "None", "Red", "Green", "Blue", "Yellow", "White", "Black", 
     "Remove Overlay", "Show Collision", "Invisible", "Play Sound"
 };
@@ -3082,7 +3030,6 @@ static EventOption LabOptions_OverlaysDefault[OVERLAY_COUNT] = {
         .kind = OPTKIND_STRING,
         .value_num = OVERLAY_COLOUR_COUNT,
         .name = "Actionable",
-        .desc = "",
         .values = LabValues_OverlayNames,
         .OnChange = Lab_ChangeOverlays,
     },
@@ -3090,7 +3037,6 @@ static EventOption LabOptions_OverlaysDefault[OVERLAY_COUNT] = {
         .kind = OPTKIND_STRING,
         .value_num = OVERLAY_COLOUR_COUNT,
         .name = "Hitstun",
-        .desc = "",
         .values = LabValues_OverlayNames,
         .OnChange = Lab_ChangeOverlays,
     },
@@ -3098,7 +3044,6 @@ static EventOption LabOptions_OverlaysDefault[OVERLAY_COUNT] = {
         .kind = OPTKIND_STRING,
         .value_num = OVERLAY_COLOUR_COUNT,
         .name = "Invincible",
-        .desc = "",
         .values = LabValues_OverlayNames,
         .OnChange = Lab_ChangeOverlays,
     },
@@ -3106,7 +3051,6 @@ static EventOption LabOptions_OverlaysDefault[OVERLAY_COUNT] = {
         .kind = OPTKIND_STRING,
         .value_num = OVERLAY_COLOUR_COUNT,
         .name = "Ledge Actionable",
-        .desc = "",
         .values = LabValues_OverlayNames,
         .OnChange = Lab_ChangeOverlays,
     },
@@ -3114,7 +3058,6 @@ static EventOption LabOptions_OverlaysDefault[OVERLAY_COUNT] = {
         .kind = OPTKIND_STRING,
         .value_num = OVERLAY_COLOUR_COUNT,
         .name = "Missed L-Cancel",
-        .desc = "",
         .values = LabValues_OverlayNames,
         .OnChange = Lab_ChangeOverlays,
     },
@@ -3122,7 +3065,6 @@ static EventOption LabOptions_OverlaysDefault[OVERLAY_COUNT] = {
         .kind = OPTKIND_STRING,
         .value_num = OVERLAY_COLOUR_COUNT,
         .name = "Can Fastfall",
-        .desc = "",
         .values = LabValues_OverlayNames,
         .OnChange = Lab_ChangeOverlays,
     },
@@ -3130,7 +3072,6 @@ static EventOption LabOptions_OverlaysDefault[OVERLAY_COUNT] = {
         .kind = OPTKIND_STRING,
         .value_num = OVERLAY_COLOUR_COUNT,
         .name = "Autocancel",
-        .desc = "",
         .values = LabValues_OverlayNames,
         .OnChange = Lab_ChangeOverlays,
     },
@@ -3138,7 +3079,6 @@ static EventOption LabOptions_OverlaysDefault[OVERLAY_COUNT] = {
         .kind = OPTKIND_STRING,
         .value_num = OVERLAY_COLOUR_COUNT,
         .name = "Crouch",
-        .desc = "",
         .values = LabValues_OverlayNames,
         .OnChange = Lab_ChangeOverlays,
     },
@@ -3146,7 +3086,6 @@ static EventOption LabOptions_OverlaysDefault[OVERLAY_COUNT] = {
         .kind = OPTKIND_STRING,
         .value_num = OVERLAY_COLOUR_COUNT,
         .name = "Wait",
-        .desc = "",
         .values = LabValues_OverlayNames,
         .OnChange = Lab_ChangeOverlays,
     },
@@ -3154,7 +3093,6 @@ static EventOption LabOptions_OverlaysDefault[OVERLAY_COUNT] = {
         .kind = OPTKIND_STRING,
         .value_num = OVERLAY_COLOUR_COUNT,
         .name = "Walk",
-        .desc = "",
         .values = LabValues_OverlayNames,
         .OnChange = Lab_ChangeOverlays,
     },
@@ -3162,7 +3100,6 @@ static EventOption LabOptions_OverlaysDefault[OVERLAY_COUNT] = {
         .kind = OPTKIND_STRING,
         .value_num = OVERLAY_COLOUR_COUNT,
         .name = "Dash",
-        .desc = "",
         .values = LabValues_OverlayNames,
         .OnChange = Lab_ChangeOverlays,
     },
@@ -3170,7 +3107,6 @@ static EventOption LabOptions_OverlaysDefault[OVERLAY_COUNT] = {
         .kind = OPTKIND_STRING,
         .value_num = OVERLAY_COLOUR_COUNT,
         .name = "Run",
-        .desc = "",
         .values = LabValues_OverlayNames,
         .OnChange = Lab_ChangeOverlays,
     },
@@ -3178,7 +3114,6 @@ static EventOption LabOptions_OverlaysDefault[OVERLAY_COUNT] = {
         .kind = OPTKIND_STRING,
         .value_num = OVERLAY_COLOUR_COUNT,
         .name = "Jumps",
-        .desc = "",
         .values = LabValues_OverlayNames,
         .OnChange = Lab_ChangeOverlays,
     },
@@ -3186,7 +3121,6 @@ static EventOption LabOptions_OverlaysDefault[OVERLAY_COUNT] = {
         .kind = OPTKIND_STRING,
         .value_num = OVERLAY_COLOUR_COUNT,
         .name = "Full Hop",
-        .desc = "",
         .values = LabValues_OverlayNames,
         .OnChange = Lab_ChangeOverlays,
     },
@@ -3194,7 +3128,6 @@ static EventOption LabOptions_OverlaysDefault[OVERLAY_COUNT] = {
         .kind = OPTKIND_STRING,
         .value_num = OVERLAY_COLOUR_COUNT,
         .name = "Short Hop",
-        .desc = "",
         .values = LabValues_OverlayNames,
         .OnChange = Lab_ChangeOverlays,
     },
@@ -3202,7 +3135,6 @@ static EventOption LabOptions_OverlaysDefault[OVERLAY_COUNT] = {
         .kind = OPTKIND_STRING,
         .value_num = OVERLAY_COLOUR_COUNT,
         .name = "IASA",
-        .desc = "",
         .values = LabValues_OverlayNames,
         .OnChange = Lab_ChangeOverlays,
     },
@@ -3210,7 +3142,6 @@ static EventOption LabOptions_OverlaysDefault[OVERLAY_COUNT] = {
         .kind = OPTKIND_STRING,
         .value_num = OVERLAY_COLOUR_COUNT,
         .name = "Shield Stun",
-        .desc = "",
         .values = LabValues_OverlayNames,
         .OnChange = Lab_ChangeOverlays,
     }
@@ -3220,24 +3151,42 @@ static EventOption LabOptions_OverlaysDefault[OVERLAY_COUNT] = {
 static EventMenu LabMenu_OverlaysHMN = {
     .name = "HMN Overlays",
     .option_num = sizeof(LabOptions_OverlaysHMN) / sizeof(EventOption),
-    .options = &LabOptions_OverlaysHMN,
-    .shortcuts = &Lab_ShortcutList,
+    .options = LabOptions_OverlaysHMN,
 };
 
 static EventMenu LabMenu_OverlaysCPU = {
     .name = "CPU Overlays",
     .option_num = sizeof(LabOptions_OverlaysCPU) / sizeof(EventOption),
-    .options = &LabOptions_OverlaysCPU,
-    .shortcuts = &Lab_ShortcutList,
+    .options = LabOptions_OverlaysCPU,
 };
 
 // SHORTCUTS #########################################################
 
 static Shortcut Lab_Shortcuts[] = {
     {
-        .buttons_mask = HSD_BUTTON_A,
+        .button_mask = HSD_BUTTON_A,
         .option = &LabOptions_General[OPTGEN_FRAME],
-    }
+    },
+    {
+        .button_mask = HSD_BUTTON_X,
+        .option = &LabOptions_General[OPTGEN_MODEL],
+    },
+    {
+        .button_mask = HSD_BUTTON_DPAD_LEFT,
+        .option = &LabOptions_CPU[OPTCPU_TECHOPTIONS],
+    },
+    {
+        .button_mask = HSD_BUTTON_DPAD_RIGHT,
+        .option = &LabOptions_Record[OPTREC_SLOTMANAGEMENT],
+    },
+    {
+        .button_mask = HSD_BUTTON_DPAD_UP,
+        .option = &LabOptions_General[OPTGEN_OSDS],
+    },
+    {
+        .button_mask = HSD_BUTTON_DPAD_DOWN,
+        .option = &LabOptions_Main[OPTLAB_RECORD_OPTIONS],
+    },
 };
 
 static ShortcutList Lab_ShortcutList = {

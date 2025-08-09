@@ -5,11 +5,6 @@
 static Arch_ImportData *stc_import_assets;
 static ImportData import_data;
 static char *slots_names[] = {"A", "B"};
-static _HSD_ImageDesc image_desc = {
-    .format = 4,
-    .height = RESIZE_HEIGHT,
-    .width = RESIZE_WIDTH,
-};
 static GXColor text_white = {255, 255, 255, 255};
 static GXColor text_gold = {255, 211, 0, 255};
 
@@ -18,6 +13,15 @@ static EventDesc *event_desc;
 ExportHeader *GetExportHeaderFromCard(int slot, char *fileName, void *buffer);
 int CSS_ID(int ext_id);
 int GetSelectedFighterIdOnCssForHmn();
+void Memcard_Wait(void);
+void Menu_Left_Right(int down, u8* cursor);
+void Menu_SelFile_Init(GOBJ *menu_gobj);
+void Menu_SelFile_Exit(GOBJ *menu_gobj);
+void Menu_SelFile_Think(GOBJ *menu_gobj);
+int Menu_SelFile_LoadPage(GOBJ *menu_gobj, int page);
+void Menu_SelCard_Init(GOBJ *menu_gobj);
+void Menu_SelCard_Exit(GOBJ *menu_gobj);
+void Menu_SelCard_Think(GOBJ *menu_gobj);
 
 // OnLoad
 void OnCSSLoad(HSD_Archive *archive)
@@ -67,8 +71,6 @@ void Read_Recordings()
     import_data.file_num = 0;
     import_data.hidden_file_num = 0;
     int slot = import_data.memcard_slot;
-    char *filename[32];
-    int file_size;
     s32 memSize, sectorSize;
 
     int hmnCSSId = CSS_ID(GetSelectedFighterIdOnCssForHmn());
@@ -101,8 +103,8 @@ void Read_Recordings()
                             continue;
 
                         // check file matches expectations
-                        if (strncmp(os_info->company, card_stat.company, sizeof(os_info->company)) != 0 ||
-                                strncmp(os_info->gameName, card_stat.gameName, sizeof(os_info->gameName)) != 0 ||
+                        if (strncmp(os_info->company, (char *)card_stat.company, sizeof(os_info->company)) != 0 ||
+                                strncmp(os_info->gameName, (char *)card_stat.gameName, sizeof(os_info->gameName)) != 0 ||
                                 strncmp("TMREC", card_stat.fileName, 5) != 0)
                             continue;
 
@@ -460,14 +462,11 @@ void Menu_SelCard_Think(GOBJ *menu_gobj)
         }
     }
 
-    // check for exit
     if (down & HSD_BUTTON_B)
     {
         Menu_Destroy(menu_gobj);
         SFX_PlayCommon(0);
     }
-
-    // check for A
     else if (down & HSD_BUTTON_A)
     {
         // check if valid memcard inserted
@@ -594,7 +593,6 @@ void Menu_SelFile_Think(GOBJ *menu_gobj)
     // if no files exist
     if (import_data.file_num == 0)
     {
-        // check for exit
         if (down & (HSD_BUTTON_B | HSD_BUTTON_A))
             goto EXIT;
         return;
@@ -603,20 +601,20 @@ void Menu_SelFile_Think(GOBJ *menu_gobj)
     // cursor movement
     int curr_page = import_data.page;
     int curr_cursor = import_data.cursor;
-    if (down & (HSD_BUTTON_UP | HSD_BUTTON_DPAD_UP)) // check for cursor up
+    if (down & (HSD_BUTTON_UP | HSD_BUTTON_DPAD_UP))
     {
         import_data.cursor--;
     }
-    else if (down & (HSD_BUTTON_LEFT | HSD_BUTTON_DPAD_LEFT)) // check for cursor down
+    else if (down & (HSD_BUTTON_LEFT | HSD_BUTTON_DPAD_LEFT))
     {
         import_data.cursor = 0;
         import_data.page--;
     }
-    else if (down & (HSD_BUTTON_DOWN | HSD_BUTTON_DPAD_DOWN)) // check for cursor down
+    else if (down & (HSD_BUTTON_DOWN | HSD_BUTTON_DPAD_DOWN))
     {
         import_data.cursor++;
     }
-    else if (down & (HSD_BUTTON_RIGHT | HSD_BUTTON_DPAD_RIGHT)) // check for cursor right
+    else if (down & (HSD_BUTTON_RIGHT | HSD_BUTTON_DPAD_RIGHT))
     {
         import_data.cursor = 0;
         import_data.page++;
@@ -675,7 +673,6 @@ void Menu_SelFile_Think(GOBJ *menu_gobj)
     Text_SetColor(import_data.filename_text, cursor, &text_gold);
 
     // update file info text from header data
-    int this_file_index = (import_data.page * IMPORT_FILESPERPAGE) + cursor;
     ExportHeader *header = &import_data.header[cursor];
 
     // update file info text
@@ -774,7 +771,6 @@ void Menu_SelFile_Exit(GOBJ *menu_gobj)
 int Menu_SelFile_LoadPage(GOBJ *menu_gobj, int page)
 {
     int result = 0;
-    int cursor = import_data.cursor; // start at cursor
     int page_total = (import_data.file_num + IMPORT_FILESPERPAGE - 1) / IMPORT_FILESPERPAGE;
 
     // ensure page exists
@@ -853,7 +849,6 @@ int Menu_SelFile_LoadPage(GOBJ *menu_gobj, int page)
                     // get file info
                     int this_file_index = (page * IMPORT_FILESPERPAGE) + i;
                     char *file_name = import_data.file_info[this_file_index].file_name;
-                    int file_size = import_data.file_info[this_file_index].file_size;
                     int file_no = import_data.file_info[this_file_index].file_no;
 
                     // get comment from card
@@ -906,7 +901,6 @@ int Menu_SelFile_DeleteFile(GOBJ *menu_gobj, int file_index)
 
                 // get file info
                 char *file_name = import_data.file_info[file_index].file_name;
-                int file_size = import_data.file_info[file_index].file_size;
                 CARDFileInfo card_file_info;
 
                 // open card (get file info)
@@ -1009,11 +1003,11 @@ void Menu_Confirm_Init(GOBJ *menu_gobj, int kind)
 
 void Menu_Left_Right(int down, u8* cursor)
 {
-    if (*cursor < 0 || import_data.confirm.cursor > 1)
+    if (import_data.confirm.cursor > 1)
         assert("cursor out of bounds");
 
     // cursor movement
-    if (down & (HSD_BUTTON_RIGHT | HSD_BUTTON_DPAD_RIGHT)) // check for cursor right
+    if (down & (HSD_BUTTON_RIGHT | HSD_BUTTON_DPAD_RIGHT))
     {
         if (*cursor == 0)
         {
@@ -1021,7 +1015,7 @@ void Menu_Left_Right(int down, u8* cursor)
             SFX_PlayCommon(2);
         }
     }
-    else if (down & (HSD_BUTTON_LEFT | HSD_BUTTON_DPAD_LEFT)) // check for cursor down
+    else if (down & (HSD_BUTTON_LEFT | HSD_BUTTON_DPAD_LEFT))
     {
         if (*cursor == 1)
         {
@@ -1252,7 +1246,7 @@ void Menu_Confirm_Exit(GOBJ *menu_gobj)
 }
 
 // Misc functions
-void Memcard_Wait()
+void Memcard_Wait(void)
 {
     while (stc_memcard_work->is_done == 0)
     {

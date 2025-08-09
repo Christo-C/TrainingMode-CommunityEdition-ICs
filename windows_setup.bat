@@ -13,8 +13,7 @@ if not exist "D:/devkitPro/devkitPPC" (
     set "PATH=%PATH%;D:\devkitPro\devkitPPC\bin"
 )
 
-D:\devkitPro\msys2\msys2_shell.cmd -use-full-path -msys2 -here
-exit 1
+D:\devkitPro\msys2\msys2_shell.cmd -use-full-path -defterm -no-start -msys2 -here
 
 :end
 

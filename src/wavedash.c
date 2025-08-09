@@ -1,5 +1,4 @@
 #include "wavedash.h"
-static char nullString[] = " ";
 
 enum options {
     OPT_TARGET,
@@ -12,58 +11,56 @@ enum options {
 };
 
 // Main Menu
-static char **WdOptions_Target[] = {"Off", "On"};
-static char **WdOptions_HUD[] = {"On", "Off"};
 static EventOption WdOptions_Main[] = {
     // Target
     {
-        .kind = OPTKIND_STRING,
-        .value_num = sizeof(WdOptions_Target) / 4,
+        .kind = OPTKIND_TOGGLE,
         .name = "Target",
-        .desc = "Highlight an area of the stage to wavedash towards.",
-        .values = WdOptions_Target,
+        .desc = {"Highlight an area of the stage to wavedash towards."},
     },
     // HUD
     {
-        .kind = OPTKIND_STRING,
-        .value_num = sizeof(WdOptions_HUD) / 4,
+        .kind = OPTKIND_TOGGLE,
         .name = "HUD",
-        .desc = "Toggle visibility of the HUD.",
-        .values = WdOptions_HUD,
+        .desc = {"Toggle visibility of the HUD."},
+        .val = 1,
+        .OnChange = Wavedash_ChangeShowHUD,
     },
     // Tips
     {
-        .kind = OPTKIND_STRING,
-        .value_num = sizeof(WdOptions_HUD) / 4,
+        .kind = OPTKIND_TOGGLE,
         .name = "Tips",
-        .desc = "Toggle the onscreen display of tips.",
-        .values = WdOptions_HUD,
+        .desc = {"Toggle the onscreen display of tips."},
+        .val = 1,
     },
     // Help
     {
-        .kind = OPTKIND_FUNC,
+        .kind = OPTKIND_INFO,
         .name = "Help",
-        .desc = "A wavedash is performed by air-dodging diagonally down\nas soon you leave the ground from a jump, causing the fighter\nto slide a short distance. This technique will allow you to quickly\nadjust your position and even attack while sliding.",
+        .desc =
+            {"A wavedash is performed by air-dodging diagonally down",
+             "as soon you leave the ground from a jump, causing the fighter",
+             "to slide a short distance. This technique will allow you to quickly",
+             "adjust your position and even attack while sliding."},
     },
     // Exit
     {
         .kind = OPTKIND_FUNC,
         .name = "Exit",
-        .desc = "Return to the Event Selection Screen.",
+        .desc = {"Return to the Event Selection Screen."},
         .OnSelect = Event_Exit,
     },
 };
 static EventMenu WdMenu_Main = {
     .name = "Wavedash Training",
     .option_num = sizeof(WdOptions_Main) / sizeof(EventOption),
-    .options = &WdOptions_Main,
+    .options = WdOptions_Main,
 };
 
 // Init Function
 void Event_Init(GOBJ *gobj)
 {
     WavedashData *event_data = gobj->userdata;
-    EventDesc *event_desc = event_data->event_desc;
     GOBJ *hmn = Fighter_GetGObj(0);
     FighterData *hmn_data = hmn->userdata;
 
@@ -88,7 +85,7 @@ void Event_Think(GOBJ *event)
 
     Wavedash_Think(event_data, hmn_data);
 }
-void Event_Exit()
+void Event_Exit(GOBJ *menu)
 {
     // end game
     stc_match->state = 3;
@@ -100,26 +97,15 @@ void Event_Exit()
 // Event functions
 void Wavedash_Init(WavedashData *event_data)
 {
-
-    // create hud cobj
-    GOBJ *hudcam_gobj = GObj_Create(19, 20, 0);
-    COBJDesc ***dmgScnMdls = Archive_GetPublicAddress(*stc_ifall_archive, 0x803f94d0);
-    COBJDesc *cam_desc = dmgScnMdls[1][0];
-    COBJ *hud_cobj = COBJ_LoadDesc(cam_desc);
-    // init camera
-    GObj_AddObject(hudcam_gobj, R13_U8(-0x3E55), hud_cobj);
-    GOBJ_InitCamera(hudcam_gobj, Wavedash_HUDCamThink, 7);
-    hudcam_gobj->cobj_links = 1 << 18;
-
     GOBJ *hud_gobj = GObj_Create(0, 0, 0);
     event_data->hud.gobj = hud_gobj;
     // Load jobj
     JOBJ *hud_jobj = JOBJ_LoadJoint(event_data->assets->hud);
     GObj_AddObject(hud_gobj, 3, hud_jobj);
-    GObj_AddGXLink(hud_gobj, GXLink_Common, 18, 80);
+    GObj_AddGXLink(hud_gobj, GXLink_Common, GXLINK_HUD, 80);
 
     // create text canvas
-    int canvas = Text_CreateCanvas(2, hud_gobj, 14, 15, 0, 18, 81, 19);
+    int canvas = Text_CreateCanvas(2, hud_gobj, 14, 15, 0, GXLINK_HUD, 81, 19);
     event_data->hud.canvas = canvas;
 
     // init text
@@ -158,7 +144,6 @@ void Wavedash_Init(WavedashData *event_data)
     // init timer
     event_data->timer = -1;
     event_data->since_wavedash = 255;
-    return 0;
 }
 void Wavedash_Think(WavedashData *event_data, FighterData *hmn_data)
 {
@@ -264,9 +249,19 @@ void Wavedash_Think(WavedashData *event_data, FighterData *hmn_data)
             }
 
             // look for failed WD
-            else if ((event_data->is_early_airdodge == 1) && (((hmn_data->state_id == ASID_JUMPF) || (hmn_data->state_id == ASID_JUMPB)) && (hmn_data->TM.state_frame >= 10)) ||
-                     ((hmn_data->state_id == ASID_ESCAPEAIR) && (hmn_data->TM.state_frame >= 10) && (hmn_data->TM.state_prev[1] == ASID_KNEEBEND)))
-            {
+            else if (
+                (
+                    (event_data->is_early_airdodge == 1)
+                    && (
+                        (hmn_data->state_id == ASID_JUMPF)
+                        || (hmn_data->state_id == ASID_JUMPB)
+                    ) && (hmn_data->TM.state_frame >= 10)
+                ) || (
+                    (hmn_data->state_id == ASID_ESCAPEAIR) 
+                    && (hmn_data->TM.state_frame >= 10) 
+                    && (hmn_data->TM.state_prev[1] == ASID_KNEEBEND)
+                )
+            ) {
                 is_finished = 1;
                 mat_anim = event_data->assets->hudmatanim[1];
                 SFX_PlayCommon(3);
@@ -274,7 +269,7 @@ void Wavedash_Think(WavedashData *event_data, FighterData *hmn_data)
                 // restore position
                 int ray_index;
                 int ray_kind;
-                Vec2 ray_angle;
+                Vec3 ray_angle;
                 Vec3 ray_pos;
                 float from_x = event_data->restore.pos.X;
                 float to_x = from_x;
@@ -422,12 +417,6 @@ void Wavedash_Think(WavedashData *event_data, FighterData *hmn_data)
         arrow_jobj->trans.X = xpos;
         JOBJ_SetMtxDirtySub(arrow_jobj);
     }
-}
-void Wavedash_HUDCamThink(GOBJ *gobj)
-{
-    // if HUD enabled and not paused
-    if (!WdOptions_Main[OPT_HUD].val && Pause_CheckStatus(1) != 2)
-        CObjThink_Common(gobj);
 }
 
 // Target functions
@@ -705,6 +694,13 @@ void Target_ChangeState(GOBJ *target_gobj, int state)
     JOBJ_AddAnimAll(target_jobj, event_data->assets->target_jointanim[state], event_data->assets->target_matanim[state], 0);
     JOBJ_ReqAnimAll(target_jobj, 0); // req anim
 }
+
+void Wavedash_ChangeShowHUD(GOBJ *menu_gobj, int show)
+{
+    HUDCamData *cam = event_vars->hudcam_gobj->userdata;
+    cam->hide = !show;
+}
+
 float Target_GetWdashDistance(FighterData *hmn_data, float mag)
 {
 
@@ -757,7 +753,7 @@ int Target_CheckArea(WavedashData *event_data, int line, Vec3 *pos, float x_offs
 }
 
 // Tips
-Tips_Think(WavedashData *event_data, FighterData *hmn_data)
+void Tips_Think(WavedashData *event_data, FighterData *hmn_data)
 {
 
     // only if enabled

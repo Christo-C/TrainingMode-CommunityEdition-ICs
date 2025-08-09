@@ -1,5 +1,4 @@
 #include "lcancel.h"
-static char nullString[] = " ";
 
 // Main Menu
 enum lcancel_option
@@ -12,63 +11,60 @@ enum lcancel_option
 
     OPTLC_COUNT
 };
-static char **LcOptions_Barrel[] = {"Off", "Stationary", "Move"};
-static char **LcOptions_OffOn[] = {"Off", "On"};
+static const char *LcOptions_Barrel[] = {"Off", "Stationary", "Move"};
 static EventOption LcOptions_Main[OPTLC_COUNT] = {
     // Target
     {
         .kind = OPTKIND_STRING,
         .value_num = sizeof(LcOptions_Barrel) / 4,
         .name = "Target",
-        .desc = "Enable a target to attack. Use DPad down to\nmanually move it.",
+        .desc = {"Enable a target to attack. Use DPad down to",
+                 "manually move it."},
         .values = LcOptions_Barrel,
     },
     // HUD
     {
-        .kind = OPTKIND_STRING,
-        .value_num = sizeof(LcOptions_OffOn) / 4,
+        .kind = OPTKIND_TOGGLE,
         .val = 1,
         .name = "HUD",
-        .desc = "Toggle visibility of the HUD.",
-        .values = LcOptions_OffOn,
+        .desc = {"Toggle visibility of the HUD."},
+        .OnChange = LCancel_ChangeShowHUD,
     },
     // Tips
     {
-        .kind = OPTKIND_STRING,
-        .value_num = sizeof(LcOptions_OffOn) / 4,
+        .kind = OPTKIND_TOGGLE,
         .val = 1,
         .name = "Tips",
-        .desc = "Toggle the onscreen display of tips.",
-        .values = LcOptions_OffOn,
+        .desc = {"Toggle the onscreen display of tips."},
         .OnChange = Tips_Toggle,
     },
     // Help
     {
-        .kind = OPTKIND_FUNC,                                                                                                                                                                                       // the type of option this is; menu, string list, integers list, etc
-        .name = "Help",                                                                                                                                                                                             // pointer to a string
-        .desc = "L-canceling is performed by pressing L, R, or Z up to \n7 frames before landing from a non-special aerial\nattack. This will cut the landing lag in half, allowing \nyou to act sooner after attacking.", // string describing what this option does
+        .kind = OPTKIND_INFO,
+        .name = "Help", // pointer to a string
+        .desc = {"L-canceling is performed by pressing L, R, or Z up to ",
+                 "7 frames before landing from a non-special aerial",
+                 "attack. This will cut the landing lag in half, allowing ",
+                 "you to act sooner after attacking."},
     },
     // Exit
     {
         .kind = OPTKIND_FUNC,
         .name = "Exit",
-        .desc = "Return to the Event Selection Screen.",
+        .desc = {"Return to the Event Selection Screen."},
         .OnSelect = Event_Exit,
     },
 };
 static EventMenu LabMenu_Main = {
     .name = "L-Cancel Training",
     .option_num = sizeof(LcOptions_Main) / sizeof(EventOption),
-    .options = &LcOptions_Main,
+    .options = LcOptions_Main,
 };
 
 // Init Function
 void Event_Init(GOBJ *gobj)
 {
     LCancelData *event_data = gobj->userdata;
-    EventDesc *event_desc = event_data->event_desc;
-    GOBJ *hmn = Fighter_GetGObj(0);
-    FighterData *hmn_data = hmn->userdata;
 
     // get l-cancel assets
     event_data->lcancel_assets = Archive_GetPublicAddress(event_vars->event_archive, "lcancel");
@@ -87,7 +83,6 @@ void Event_Think(GOBJ *event)
     // get fighter data
     GOBJ *hmn = Fighter_GetGObj(0);
     FighterData *hmn_data = hmn->userdata;
-    HSD_Pad *pad = PadGet(hmn_data->pad_index, PADGET_ENGINE);
 
     // set infinite shields
     hmn_data->shield.health = 60;
@@ -95,7 +90,7 @@ void Event_Think(GOBJ *event)
     LCancel_Think(event_data, hmn_data);
     Barrel_Think(event_data);
 }
-void Event_Exit()
+void Event_Exit(GOBJ *menu)
 {
     // end game
     stc_match->state = 3;
@@ -107,26 +102,15 @@ void Event_Exit()
 // L-Cancel functions
 void LCancel_Init(LCancelData *event_data)
 {
-
-    // create hud cobj
-    GOBJ *hudcam_gobj = GObj_Create(19, 20, 0);
-    COBJDesc ***dmgScnMdls = Archive_GetPublicAddress(*stc_ifall_archive, 0x803f94d0);
-    COBJDesc *cam_desc = dmgScnMdls[1][0];
-    COBJ *hud_cobj = COBJ_LoadDesc(cam_desc);
-    // init camera
-    GObj_AddObject(hudcam_gobj, R13_U8(-0x3E55), hud_cobj);
-    GOBJ_InitCamera(hudcam_gobj, LCancel_HUDCamThink, 7);
-    hudcam_gobj->cobj_links = 1 << 18;
-
     GOBJ *hud_gobj = GObj_Create(0, 0, 0);
     event_data->hud.gobj = hud_gobj;
     // Load jobj
     JOBJ *hud_jobj = JOBJ_LoadJoint(event_data->lcancel_assets->hud);
     GObj_AddObject(hud_gobj, 3, hud_jobj);
-    GObj_AddGXLink(hud_gobj, GXLink_Common, 18, 80);
+    GObj_AddGXLink(hud_gobj, GXLink_Common, GXLINK_HUD, 80);
 
     // create text canvas
-    int canvas = Text_CreateCanvas(2, hud_gobj, 14, 15, 0, 18, 81, 19);
+    int canvas = Text_CreateCanvas(2, hud_gobj, 14, 15, 0, GXLINK_HUD, 81, 19);
     event_data->hud.canvas = canvas;
 
     // init text
@@ -170,6 +154,10 @@ void LCancel_Init(LCancelData *event_data)
     event_data->is_current_aerial_counted = false;
     arrow_jobj->trans.X = 0;
     JOBJ_SetFlags(arrow_jobj, JOBJ_HIDDEN);
+}
+void LCancel_ChangeShowHUD(GOBJ *menu_gobj, int show) {
+    HUDCamData *cam = event_vars->hudcam_gobj->userdata;
+    cam->hide = !show;
 }
 void LCancel_Think(LCancelData *event_data, FighterData *hmn_data)
 {
@@ -381,7 +369,7 @@ void Tips_Think(LCancelData *event_data, FighterData *hmn_data)
                 event_data->tip.hitbox_active = 0;
 
             // check if hitbox active
-            for (int i = 0; i < (sizeof(hmn_data->hitbox) / sizeof(ftHit)); i++)
+            for (u32 i = 0; i < countof(hmn_data->hitbox); i++)
             {
                 if (hmn_data->hitbox[i].active != 0)
                 {
@@ -557,8 +545,8 @@ void Barrel_Think(LCancelData *event_data)
                     SFX_PlayCommon(3);
                 }
             }
-            break;
         }
+        break;
     }
     case (2): // move
     {
@@ -622,8 +610,8 @@ GOBJ *Barrel_Spawn(int pos_kind)
             goto BARREL_RANDPOS;
 
         // ensure it isnt too close to the previous
-        float distance = sqrtf(pow((pos.X - barrel_lastpos->X), 2) + pow((pos.Y - barrel_lastpos->Y), 2));
-        if (distance < 25)
+        float distance = Math_Vec3Distance(&pos, barrel_lastpos);
+        if (distance < 25.f)
             goto BARREL_RANDPOS;
 
         // ensure left and right have ground
@@ -665,12 +653,27 @@ GOBJ *Barrel_Spawn(int pos_kind)
     GOBJ *barrel_gobj = Item_CreateItem2(&spawnItem);
     Item_CollAir_Bounce(barrel_gobj, Barrel_Null);
 
+    static const void *item_callbacks[] = {
+        (void *)0x803f58e0,
+        (void *)0x80287458,
+        Barrel_OnDestroy, // onDestroy
+        (void *)0x80287e68,
+        (void *)0x80287ea8,
+        (void *)0x80287ec8,
+        (void *)0x80288818,
+        Barrel_OnHurt, // onhurt
+        (void *)0x802889f8,
+        (void *)0x802888b8,
+        (void *)0x00000000,
+        (void *)0x00000000,
+        (void *)0x80288958,
+        (void *)0x80288c68,
+        (void *)0x803f5988,
+    };
+
     // replace collision callback
     ItemData *barrel_data = barrel_gobj->userdata;
-    barrel_data->it_func = item_callbacks;
-    // TODO replace functions individually
-    // barrel_data->it_func->OnDestroy = Barrel_OnDestroy;
-    // barrel_data->it_func->OnHurt = Barrel_OnHurt;
+    memcpy(barrel_data->it_func, item_callbacks, sizeof(item_callbacks));
     barrel_data->camera_subject->kind = 0;
 
     // update last barrel pos
@@ -678,7 +681,7 @@ GOBJ *Barrel_Spawn(int pos_kind)
 
     return barrel_gobj;
 }
-void Barrel_Null()
+void Barrel_Null(void)
 {
     return; // Do nothing on purpose
 }
@@ -737,24 +740,6 @@ bool IsAutoCancelLanding(FighterData *hmn_data) {
         && hmn_data->TM.state_prev[0] >= ASID_ATTACKAIRN
         && hmn_data->TM.state_prev[0] <= ASID_ATTACKAIRLW; // came from aerial attack
 }
-
-static void *item_callbacks[] = {
-    0x803f58e0,
-    0x80287458,
-    Barrel_OnDestroy, // onDestroy
-    0x80287e68,
-    0x80287ea8,
-    0x80287ec8,
-    0x80288818,
-    Barrel_OnHurt, // onhurt
-    0x802889f8,
-    0x802888b8,
-    0x00000000,
-    0x00000000,
-    0x80288958,
-    0x80288c68,
-    0x803f5988,
-};
 
 // Initial Menu
 EventMenu *Event_Menu = &LabMenu_Main;

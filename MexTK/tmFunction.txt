@@ -1,4 +1,4 @@
-eventPages
+EventPages
 GetEventDesc
 GetEventName
 GetEventDescription
@@ -10,7 +10,6 @@ GetTMCompile
 GetPageNum
 GetCSSType
 GetIsSelectStage
-GetFighter
 GetCPUFighter
 GetStage
 GetEventFile
