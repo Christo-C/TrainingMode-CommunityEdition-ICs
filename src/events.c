@@ -467,7 +467,7 @@ EventDesc Handoff = {
     .eventFile = "handoff",
     .jumpTableIndex = -1,
     .CSSType = SLCHRKIND_TRAINING,
-    .allowed_characters = { .hmn = CSSID_ICECLIMBERS, .cpu = -1 },
+    .allowed_characters = { .hmn = CSSID_ICE_CLIMBERS, .cpu = -1 },
     .playerKind = -1,
     .cpuKind = -1,
     .stage = -1,
